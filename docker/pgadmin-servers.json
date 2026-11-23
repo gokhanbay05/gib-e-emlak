@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "GIB e-Emlak PostgreSQL (Lokal)",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "gib_emlak_db",
+      "Username": "gib_user",
+      "SSLMode": "prefer",
+      "Comment": "GIB e-Emlak Otomatik Bagli PostgreSQL Sunucusu"
+    }
+  }
+}

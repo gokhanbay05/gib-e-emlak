@@ -1,0 +1,6 @@
+Bu repoda herhangi bir kod veya doküman değişikliği yapmadan önce ZORUNLU OLARAK kök dizindeki `AI_CONTEXT.md` ve `frontend/AGENTS.md` dosyalarını baştan sona oku.
+
+Temel Kurallar:
+1. Proje GİB İş Analisti Case Çalışması (Emlakçı Platformu) kapsamındadır. `AI_CONTEXT.md` içindeki 7 PostgreSQL tablosu, `BR-01`..`BR-08` iş kuralları ve `P0`..`P9` parça sırası dışına çıkma.
+2. Backend: FastAPI + SQLAlchemy 2.0 + PostgreSQL 16 (`backend/`). SQLite veya MSSQL kullanma.
+3. Frontend: React 19 + Vite + TypeScript + Astryx Design System (`frontend/`). Next.js kullanma. Raw `<div>` veya `<span>` kullanma; tüm yerleşim ve bileşenleri `@astryxdesign/core/*` altından import et ve iş bitiminde `cd frontend && npm run build && npm run astryx -- doctor --built .` ile doğrula.

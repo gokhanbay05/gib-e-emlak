@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gib_emlak_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: gib_user
+      POSTGRES_PASSWORD: gib_password
+      POSTGRES_DB: gib_emlak_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - gib_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gib_user -d gib_emlak_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gib_emlak_pgadmin
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gibemlak.local
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "5050:80"
+    volumes:
+      - ./docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
+
+volumes:
+  gib_postgres_data:
