@@ -15,7 +15,8 @@
     "@astryxdesign/theme-neutral": "latest",
     "@stylexjs/stylex": "latest",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

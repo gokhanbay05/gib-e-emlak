@@ -1,4 +1,6 @@
 import hashlib
+import random
+import re
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
@@ -24,9 +26,66 @@ PROVINCE_NAMES: dict[int, str] = {
 
 INVALID_TEST_TTBS_NUMBERS = {"0000000", "1111111", "9999999", "1234567"}
 
+DEFAULT_AGENCY_LOGOS = [
+    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=300&h=300&fit=crop",
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=300&h=300&fit=crop",
+    "https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=300&h=300&fit=crop",
+    "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=300&fit=crop",
+]
+
+LETTER_RE = re.compile(r"[A-Za-zÇĞİÖŞÜçğıöşü]")
+DIGIT_RE = re.compile(r"\d")
+SYMBOL_RE = re.compile(r"[^A-Za-z0-9ÇĞİÖŞÜçğıöşü\s]")
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]{2,}$")
+
 
 def hash_password(raw_password: str) -> str:
     return hashlib.sha256(raw_password.encode("utf-8")).hexdigest()
+
+
+def normalize_and_validate_phone(raw_phone: str, is_mobile: bool = True) -> tuple[bool, str, str]:
+    """
+    Türkiye telefon numarasını doğrular ve 0 (5XX) XXX XX XX / 0 (XXX) XXX XX XX
+    formatına çevirir.
+    """
+    digits = re.sub(r"\D", "", raw_phone or "")
+    if len(digits) == 10 and not digits.startswith("0"):
+        digits = "0" + digits
+
+    if len(digits) != 11 or not digits.startswith("0"):
+        return (
+            False,
+            "",
+            "Telefon numarası 11 haneli olmalıdır (Örn: 0 (532) 123 45 67).",
+        )
+
+    if is_mobile and not digits.startswith("05"):
+        return (
+            False,
+            "",
+            "Cep telefonu numarası 05 ile başlamalıdır (Örn: 0 (532) 123 45 67).",
+        )
+
+    formatted = f"{digits[0]} ({digits[1:4]}) {digits[4:7]} {digits[7:9]} {digits[9:11]}"
+    return True, formatted, ""
+
+
+def validate_password_strength(password: str) -> tuple[bool, str]:
+    """
+    Şifre kuralı: En az 8 karakter, en az 1 harf, 1 rakam ve 1 sembol içermelidir.
+    """
+    if len(password) < 8:
+        return False, "Şifre en az 8 karakter uzunluğunda olmalıdır."
+    if not LETTER_RE.search(password):
+        return False, "Şifre en az bir harf içermelidir."
+    if not DIGIT_RE.search(password):
+        return False, "Şifre en az bir rakam (0-9) içermelidir."
+    if not SYMBOL_RE.search(password):
+        return (
+            False,
+            "Şifre en az bir sembol (!@#$%^&*._- vb.) içermelidir.",
+        )
+    return True, ""
 
 
 def validate_ttbs_number(
@@ -35,18 +94,17 @@ def validate_ttbs_number(
     check_duplicate: bool = True,
 ) -> tuple[bool, str, str]:
     """
-    BR-01: T.C. Ticaret Bakanlığı Taşınmaz Ticareti Yetki Belgesi Numarası doğrulaması.
-    Kural: 7 haneli rakam olmalı, ilk 2 hanesi geçerli Türkiye il plakası (01-81) olmalı
-    ve iptal/geçersiz test listesinde yer almamalıdır.
+    BR-01: T.C. Ticaret Bakanlığı Taşınmaz Ticareti Bilgi Sistemi (TTBS) Yetki Belgesi doğrulaması.
+    Resmi format: 7 haneli sayısal, ilk 2 hanesi il plaka kodu (01-81).
     """
-    cleaned = ttbs_no.strip()
+    cleaned = re.sub(r"\s+", "", ttbs_no or "")
     if len(cleaned) != 7 or not cleaned.isdigit():
         return (
             False,
             "",
             (
-                "BR-01: Taşınmaz Ticareti Yetki Belgesi numarası 7 haneli sayısal bir değer "
-                "olmalıdır (Örn: 0609412 veya 3408521)."
+                "BR-01: Taşınmaz Ticareti Yetki Belgesi numarası resmi olarak 7 haneli "
+                "sayısal bir değerdir ve ilk 2 hanesi il plaka kodudur (Örn: 0609412)."
             ),
         )
 
@@ -66,8 +124,8 @@ def validate_ttbs_number(
             False,
             "",
             (
-                f"BR-01: Belge numarasının ilk iki hanesi ({cleaned[:2]}) geçerli bir il kodu "
-                "(01-81) değildir."
+                f"BR-01: Belge numarasının ilk iki hanesi ({cleaned[:2]}) geçerli bir "
+                "Türkiye il plaka kodu (01-81) değildir."
             ),
         )
 
@@ -91,44 +149,35 @@ def validate_ttbs_number(
         province_name,
         (
             f"T.C. Ticaret Bakanlığı TTBS Doğrulaması Başarılı ({province_name} Ticaret İl "
-            f"Müdürlüğü - Belge No: {cleaned} AKTİF)."
+            f"Müdürlüğü — Belge No: {cleaned} AKTİF)."
         ),
     )
 
 
 class TTBSVerifyRequest(BaseModel):
     ttbs_document_no: str = Field(..., description="7 haneli Taşınmaz Ticareti Yetki Belge No")
-    agency_name: str | None = Field(default=None, description="Emlak ofisi adı")
-    check_duplicate: bool = Field(default=True, description="Mükerrer belge kontrolü")
+    agency_name: str | None = Field(default=None)
+    check_duplicate: bool = Field(default=True)
 
 
 class RegisterRequest(BaseModel):
-    # Ortak Alanlar
-    full_name: str = Field(..., min_length=2, description="Ad ve Soyad")
-    email: str = Field(..., min_length=5, description="Tekil E-posta Adresi (BR-02)")
-    password: str = Field(..., min_length=4, description="Şifre")
-    phone: str = Field(..., min_length=7, description="Cep Telefonu Numarası")
+    # Ortak Alanlar (Ad ve Soyad ayrı!)
+    first_name: str = Field(..., description="Ad")
+    last_name: str = Field(..., description="Soyad")
+    email: str = Field(..., description="Tekil E-posta Adresi (BR-02)")
+    password: str = Field(..., description="En az 8 karakter, harf + rakam + sembol")
+    phone: str = Field(..., description="Cep Telefonu Numarası")
     role: str = Field(..., description="AGENT (Emlakçı) veya CUSTOMER (Müşteri)")
 
-    # Emlakçıya Özel (Farklı) Alanlar
-    ttbs_document_no: str | None = Field(
-        default=None, description="Taşınmaz Ticareti Yetki Belge No (Emlakçı için zorunlu)"
-    )
-    office_phone: str | None = Field(
-        default=None, description="Emlak Ofisi Sabit Telefonu (Emlakçı için zorunlu)"
-    )
-    agency_name: str | None = Field(
-        default=None, description="Emlak Ofisi İsmi (Emlakçı için zorunlu)"
-    )
-    logo_url: str | None = Field(
-        default=None, description="Emlak Ofisi Logo URL (Emlakçıya ait)"
-    )
-    office_address: str | None = Field(
-        default=None, description="Emlak Ofisi Adresi"
-    )
-    customer_type: str | None = Field(
-        default="ALICI", description="Müşteri ise varsayılan müşteri tipi (ALICI / KIRACI)"
-    )
+    # Emlakçıya Özel Alanlar
+    ttbs_document_no: str | None = Field(default=None)
+    office_phone: str | None = Field(default=None)
+    agency_name: str | None = Field(default=None)
+    logo_url: str | None = Field(default=None)
+    city: str | None = Field(default=None)
+    district: str | None = Field(default=None)
+    neighborhood: str | None = Field(default=None)
+    address_detail: str | None = Field(default=None)
 
 
 class LoginRequest(BaseModel):
@@ -157,6 +206,9 @@ def serialize_user_session(user: User, db: Session) -> dict:
                 "phone": agency.phone,
                 "mobile_phone": agency.mobile_phone,
                 "fax": agency.fax,
+                "city": agency.city,
+                "district": agency.district,
+                "neighborhood": agency.neighborhood,
                 "address": agency.address,
                 "ttbs_document_no": agency.ttbs_document_no,
                 "is_ttbs_verified": agency.is_ttbs_verified,
@@ -183,9 +235,6 @@ def verify_ttbs_document(
     payload: TTBSVerifyRequest,
     db: Session = Depends(get_db),
 ) -> dict:
-    """
-    BR-01: T.C. Ticaret Bakanlığı Taşınmaz Ticareti Bilgi Sistemi (TTBS) Mock Doğrulama Servisi.
-    """
     is_valid, province, message = validate_ttbs_number(
         payload.ttbs_document_no,
         db=db,
@@ -193,7 +242,7 @@ def verify_ttbs_document(
     )
     return {
         "is_valid": is_valid,
-        "ttbs_document_no": payload.ttbs_document_no.strip(),
+        "ttbs_document_no": re.sub(r"\s+", "", payload.ttbs_document_no or ""),
         "province": province,
         "ministry": "T.C. Ticaret Bakanlığı — Taşınmaz Ticareti Bilgi Sistemi (TTBS)",
         "status": "DOĞRULANDI" if is_valid else "DOĞRULANAMADI",
@@ -207,86 +256,124 @@ def register_user(
     db: Session = Depends(get_db),
 ) -> dict:
     """
-    P2: Ortak ve ayrışan alanlarla Emlakçı (AGENT) veya Müşteri (CUSTOMER) kaydı.
-    - BR-02: Tekil e-posta kontrolü (aynı mail ile ikinci kayıt açılamaz).
-    - BR-01: Emlakçı kaydında Taşınmaz Ticareti Yetki Belgesi zorunlu doğrulaması.
+    P2: Sıkı alan doğrulamalı Emlakçı (AGENT) veya Müşteri (CUSTOMER) kaydı.
+    Tüm hataları `field_errors` sözlüğüyle birlikte döner.
     """
-    normalized_email = payload.email.strip().lower()
-    if "@" not in normalized_email or "." not in normalized_email.split("@")[-1]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Lütfen geçerli bir e-posta adresi giriniz.",
-        )
+    field_errors: dict[str, str] = {}
 
-    # BR-02: Tekil E-Posta Kontrolü
-    existing_user = db.scalar(
-        select(User).where(func.lower(User.email) == normalized_email)
-    )
-    if existing_user is not None:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=(
-                f"BR-02: '{normalized_email}' e-posta adresi ile sistemde zaten bir kayıt "
-                "bulunmaktadır. Her e-posta adresi ile yalnızca tek kayıt oluşturulabilir."
-            ),
+    first_name = payload.first_name.strip()
+    last_name = payload.last_name.strip()
+    if len(first_name) < 2 or DIGIT_RE.search(first_name):
+        field_errors["first_name"] = "Ad en az 2 harf olmalı ve rakam içermemelidir."
+    if len(last_name) < 2 or DIGIT_RE.search(last_name):
+        field_errors["last_name"] = "Soyad en az 2 harf olmalı ve rakam içermemelidir."
+
+    normalized_email = payload.email.strip().lower()
+    if not EMAIL_RE.match(normalized_email):
+        field_errors["email"] = "Lütfen geçerli bir e-posta adresi giriniz."
+    else:
+        existing_user = db.scalar(
+            select(User).where(func.lower(User.email) == normalized_email)
         )
+        if existing_user is not None:
+            field_errors["email"] = (
+                "BR-02: Bu e-posta adresi sistemde zaten kayıtlı. Tek e-posta ile "
+                "yalnızca bir kayıt oluşturulabilir."
+            )
+
+    pwd_ok, pwd_err = validate_password_strength(payload.password)
+    if not pwd_ok:
+        field_errors["password"] = pwd_err
+
+    phone_ok, formatted_phone, phone_err = normalize_and_validate_phone(
+        payload.phone, is_mobile=True
+    )
+    if not phone_ok:
+        field_errors["phone"] = phone_err
 
     role = payload.role.strip().upper()
     if role not in {"AGENT", "CUSTOMER"}:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Geçersiz kullanıcı rolü. 'AGENT' veya 'CUSTOMER' seçilmelidir.",
-        )
+        field_errors["role"] = "Geçersiz rol seçimi."
 
-    full_name = payload.full_name.strip()
-    phone = payload.phone.strip()
+    formatted_office_phone = ""
+    ttbs_msg = ""
+    province_name = ""
 
     if role == "AGENT":
         if not payload.ttbs_document_no or not payload.ttbs_document_no.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="BR-01: Emlakçı kaydı için Taşınmaz Ticareti Yetki Belgesi No zorunludur.",
+            field_errors["ttbs_document_no"] = (
+                "BR-01: Taşınmaz Ticareti Yetki Belgesi No zorunludur."
             )
-        if not payload.agency_name or not payload.agency_name.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Emlakçı kaydı için Emlak Ofisi İsmi zorunludur.",
+        else:
+            ttbs_ok, province_name, ttbs_msg = validate_ttbs_number(
+                payload.ttbs_document_no, db=db, check_duplicate=True
             )
+            if not ttbs_ok:
+                field_errors["ttbs_document_no"] = ttbs_msg
+
+        if not payload.agency_name or len(payload.agency_name.strip()) < 3:
+            field_errors["agency_name"] = "Emlak Ofisi İsmi en az 3 karakter olmalıdır."
+
         if not payload.office_phone or not payload.office_phone.strip():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Emlakçı kaydı için Emlak Ofisi Telefon Numarası zorunludur.",
+            field_errors["office_phone"] = "Ofis sabit telefonu zorunludur."
+        else:
+            off_ok, formatted_office_phone, off_err = normalize_and_validate_phone(
+                payload.office_phone, is_mobile=False
+            )
+            if not off_ok:
+                field_errors["office_phone"] = off_err
+
+        if not payload.city or not payload.city.strip():
+            field_errors["city"] = "Lütfen il seçiniz."
+        if not payload.district or not payload.district.strip():
+            field_errors["district"] = "Lütfen ilçe seçiniz."
+        if not payload.neighborhood or not payload.neighborhood.strip():
+            field_errors["neighborhood"] = "Lütfen mahalle seçiniz."
+        if not payload.address_detail or len(payload.address_detail.strip()) < 5:
+            field_errors["address_detail"] = (
+                "Cadde, sokak ve bina numarası içeren açık adres detayı zorunludur."
             )
 
-        is_valid, province, ttbs_msg = validate_ttbs_number(
-            payload.ttbs_document_no, db=db, check_duplicate=True
+    if field_errors:
+        first_msg = next(iter(field_errors.values()))
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": first_msg,
+                "field_errors": field_errors,
+            },
         )
-        if not is_valid:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=ttbs_msg,
-            )
+
+    full_name = f"{first_name} {last_name}"
+
+    if role == "AGENT":
+        assigned_logo = (
+            payload.logo_url.strip()
+            if payload.logo_url and payload.logo_url.strip()
+            else random.choice(DEFAULT_AGENCY_LOGOS)
+        )
+        city_val = payload.city.strip()  # type: ignore[union-attr]
+        district_val = payload.district.strip()  # type: ignore[union-attr]
+        neighborhood_val = payload.neighborhood.strip()  # type: ignore[union-attr]
+        detail_val = payload.address_detail.strip()  # type: ignore[union-attr]
+        full_address = f"{neighborhood_val}, {detail_val} {district_val} / {city_val}"
 
         new_agency = Agency(
-            name=payload.agency_name.strip(),
+            name=payload.agency_name.strip(),  # type: ignore[union-attr]
             authorized_person=full_name,
-            address=(
-                payload.office_address.strip()
-                if payload.office_address and payload.office_address.strip()
-                else f"{province} Merkez Ofis (İşyeri Tanımından Güncellenebilir)"
-            ),
-            phone=payload.office_phone.strip(),
-            mobile_phone=phone,
-            ttbs_document_no=payload.ttbs_document_no.strip(),
+            city=city_val,
+            district=district_val,
+            neighborhood=neighborhood_val,
+            address=full_address,
+            phone=formatted_office_phone,
+            mobile_phone=formatted_phone,
+            ttbs_document_no=re.sub(r"\s+", "", payload.ttbs_document_no or ""),
             is_ttbs_verified=True,
-            logo_url=(
-                payload.logo_url.strip()
-                if payload.logo_url and payload.logo_url.strip()
-                else "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200"
-            ),
+            logo_url=assigned_logo,
             description=(
-                f"{payload.agency_name.strip()} — T.C. Ticaret Bakanlığı Taşınmaz Ticareti "
-                f"Yetki Belgeli ({payload.ttbs_document_no.strip()}) Emlak İşletmesi."
+                f"{payload.agency_name.strip()} — {province_name} Ticaret İl Müdürlüğü "
+                f"Taşınmaz Ticareti Yetki Belgeli ({payload.ttbs_document_no.strip()}) "
+                "Emlak İşletmesi."
             ),
         )
         db.add(new_agency)
@@ -296,7 +383,7 @@ def register_user(
             full_name=full_name,
             email=normalized_email,
             password_hash=hash_password(payload.password),
-            phone=phone,
+            phone=formatted_phone,
             role="AGENT",
             agency_id=new_agency.id,
         )
@@ -305,29 +392,19 @@ def register_user(
         db.refresh(new_user)
 
         return {
-            "message": (
-                f"Emlakçı kaydı başarıyla tamamlandı. {ttbs_msg}"
-            ),
+            "message": f"Emlakçı kaydı başarıyla tamamlandı. {ttbs_msg}",
             "user": serialize_user_session(new_user, db),
         }
 
-    # CUSTOMER (Müşteri) Kaydı
-    name_parts = full_name.split(" ", 1)
-    first_name = name_parts[0]
-    last_name = name_parts[1] if len(name_parts) > 1 else "Müşteri"
-
+    # CUSTOMER (Müşteri) Kaydı — profil grubu sormadan doğrudan kayıt
     new_customer = Customer(
         first_name=first_name,
         last_name=last_name,
-        mobile_phone=phone,
+        mobile_phone=formatted_phone,
         email=normalized_email,
-        customer_type=(
-            payload.customer_type
-            if payload.customer_type in {"ALICI", "KIRACI", "SATICI", "KIRALAYAN"}
-            else "ALICI"
-        ),
+        customer_type="ALICI",
         source="SELF_KAYIT",
-        notes="Web platformu üzerinden kendi kayıt olan müşteri hesabı.",
+        notes="Web platformu üzerinden kayıt olan bireysel kullanıcı.",
     )
     db.add(new_customer)
     db.flush()
@@ -336,7 +413,7 @@ def register_user(
         full_name=full_name,
         email=normalized_email,
         password_hash=hash_password(payload.password),
-        phone=phone,
+        phone=formatted_phone,
         role="CUSTOMER",
         customer_id=new_customer.id,
     )
@@ -345,7 +422,10 @@ def register_user(
     db.refresh(new_user)
 
     return {
-        "message": "Müşteri kaydınız başarıyla oluşturuldu. Artık randevu alabilir, favori ekleyebilir ve AI arama yapabilirsiniz.",
+        "message": (
+            "Müşteri kaydınız başarıyla oluşturuldu. Artık favori ekleyebilir, "
+            "randevu alabilir ve AI akıllı arama yapabilirsiniz."
+        ),
         "user": serialize_user_session(new_user, db),
     }
 
@@ -355,14 +435,33 @@ def login_user(
     payload: LoginRequest,
     db: Session = Depends(get_db),
 ) -> dict:
+    field_errors: dict[str, str] = {}
     normalized_email = payload.email.strip().lower()
+    if not normalized_email or not EMAIL_RE.match(normalized_email):
+        field_errors["login_email"] = "Lütfen geçerli bir e-posta adresi giriniz."
+    if not payload.password:
+        field_errors["login_password"] = "Şifre alanı boş bırakılamaz."
+    if field_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": next(iter(field_errors.values())),
+                "field_errors": field_errors,
+            },
+        )
+
     user = db.scalar(
         select(User).where(func.lower(User.email) == normalized_email)
     )
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Bu e-posta adresine ait kayıtlı bir kullanıcı bulunamadı.",
+            detail={
+                "message": "Bu e-posta adresine ait kayıtlı bir kullanıcı bulunamadı.",
+                "field_errors": {
+                    "login_email": "Bu e-posta adresi sistemde kayıtlı değil."
+                },
+            },
         )
 
     hashed = hash_password(payload.password)
@@ -370,7 +469,10 @@ def login_user(
     if not is_demo_hash and user.password_hash != hashed:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Girilen şifre hatalı. Lütfen kontrol edip tekrar deneyiniz.",
+            detail={
+                "message": "Girilen şifre hatalı. Lütfen tekrar deneyiniz.",
+                "field_errors": {"login_password": "Şifre hatalı."},
+            },
         )
 
     return {
@@ -381,7 +483,6 @@ def login_user(
 
 @router.get("/api/auth/users")
 def list_registered_users(db: Session = Depends(get_db)) -> dict:
-    """Kayıtlı tüm kullanıcıları ve hızlı demo geçiş hesaplarını döndürür."""
     users = db.scalars(select(User).order_by(User.id)).all()
     return {
         "users": [serialize_user_session(u, db) for u in users],

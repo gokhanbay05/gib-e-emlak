@@ -1,8 +1,10 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -19,6 +21,8 @@ from app.models import (
     User,
 )
 from app.routers.auth import router as auth_router
+from app.routers.locations import router as locations_router
+from app.routers.uploads import router as uploads_router
 from app.seed import init_db_and_seed
 
 
@@ -52,6 +56,12 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(locations_router)
+app.include_router(uploads_router)
+
+uploads_root = Path(__file__).resolve().parent.parent / "uploads"
+uploads_root.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(uploads_root)), name="uploads")
 
 
 @app.get("/api/health", tags=["Sistem & Sağlık"])

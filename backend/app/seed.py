@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.database import Base, SessionLocal, engine
@@ -18,6 +18,30 @@ from app.models import (
 def init_db_and_seed() -> dict:
     """PostgreSQL tablolarını oluşturur ve boşsa gerçekçi başlangıç verilerini yükler."""
     Base.metadata.create_all(bind=engine)
+
+    # Mevcut agencies tablosuna yapısal il/ilçe/mahalle sütunlarını güvenle ekle
+    with engine.begin() as conn:
+        conn.execute(
+            text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS city VARCHAR(60)")
+        )
+        conn.execute(
+            text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS district VARCHAR(80)")
+        )
+        conn.execute(
+            text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS neighborhood VARCHAR(120)")
+        )
+        conn.execute(
+            text(
+                "UPDATE agencies SET city='Ankara', district='Çankaya', "
+                "neighborhood='Kızılırmak Mah.' WHERE ttbs_document_no='0600482' AND city IS NULL"
+            )
+        )
+        conn.execute(
+            text(
+                "UPDATE agencies SET city='İstanbul', district='Kadıköy', "
+                "neighborhood='Suadiye Mah.' WHERE ttbs_document_no='3401925' AND city IS NULL"
+            )
+        )
 
     with SessionLocal() as db:
         existing_agency = db.scalar(select(Agency).limit(1))

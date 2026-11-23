@@ -4,6 +4,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Divider } from '@astryxdesign/core/Divider';
+import { FileInput } from '@astryxdesign/core/FileInput';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -13,8 +14,20 @@ import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { Thumbnail } from '@astryxdesign/core/Thumbnail';
+import { useToast } from '@astryxdesign/core/Toast';
 import { Token } from '@astryxdesign/core/Token';
 import { VStack } from '@astryxdesign/core/VStack';
+import {
+  formatDigitsOnly,
+  formatTurkishPhone,
+  loginSchema,
+  parseApiError,
+  registerAgentSchema,
+  registerCustomerSchema,
+  sanitizeNameInput,
+  zodErrorsToMap,
+} from '../utils/validation';
 
 export interface SessionAgency {
   id: number;
@@ -23,6 +36,9 @@ export interface SessionAgency {
   phone: string;
   mobile_phone?: string | null;
   fax?: string | null;
+  city?: string | null;
+  district?: string | null;
+  neighborhood?: string | null;
   address: string;
   ttbs_document_no: string;
   is_ttbs_verified: boolean;
@@ -56,26 +72,19 @@ interface TTBSVerifyResult {
   message: string;
 }
 
+interface LocationOption {
+  id: number;
+  name: string;
+}
+
 interface AuthModuleProps {
   currentUser: UserSession;
   onSelectSession: (session: UserSession) => void;
   onDataChanged: () => void;
 }
 
-const PRESET_LOGOS = [
-  {
-    value: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200',
-    label: 'Kurumsal Rezidans & Kule Logosu',
-  },
-  {
-    value: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=200',
-    label: 'Modern Cam Plaza Ofis Logosu',
-  },
-  {
-    value: 'https://images.unsplash.com/photo-1582407947304-fd86f028f716?w=200',
-    label: 'Klasik Gayrimenkul & Anahtar Logosu',
-  },
-];
+const MAX_LOGO_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
+const ALLOWED_LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 
 export const VISITOR_SESSION: UserSession = {
   id: 0,
@@ -92,24 +101,39 @@ export function AuthModule({
   onSelectSession,
   onDataChanged,
 }: AuthModuleProps) {
+  const showToast = useToast();
+
   const [activeTab, setActiveTab] = useState<string>('register');
   const [registerRole, setRegisterRole] = useState<'AGENT' | 'CUSTOMER'>('AGENT');
 
-  // Ortak Kayıt Alanları
-  const [fullName, setFullName] = useState<string>('');
+  // Ortak Kayıt Alanları (Ad ve Soyad ayrı!)
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [phone, setPhone] = useState<string>('');
 
-  // Emlakçıya Özel (Farklı) Alanlar
+  // Emlakçıya Özel Alanlar
   const [ttbsDocumentNo, setTtbsDocumentNo] = useState<string>('');
   const [officePhone, setOfficePhone] = useState<string>('');
   const [agencyName, setAgencyName] = useState<string>('');
-  const [logoUrl, setLogoUrl] = useState<string>(PRESET_LOGOS[0].value);
-  const [officeAddress, setOfficeAddress] = useState<string>('');
 
-  // Müşteriye Özel Alan
-  const [customerType, setCustomerType] = useState<string>('ALICI');
+  // Yapısal Adres (İl -> İlçe -> Mahalle -> Açık Adres Detayı)
+  const [provinces, setProvinces] = useState<LocationOption[]>([]);
+  const [districts, setDistricts] = useState<LocationOption[]>([]);
+  const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
+  const [selectedProvinceId, setSelectedProvinceId] = useState<string>('');
+  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
+  const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
+  const [addressDetail, setAddressDetail] = useState<string>('');
+  const [isLoadingDistricts, setIsLoadingDistricts] = useState<boolean>(false);
+  const [isLoadingNeighborhoods, setIsLoadingNeighborhoods] = useState<boolean>(false);
+
+  // Logo Dosya Yükleme (Max 5 MB, PNG/JPG/WEBP, yüklenmezse backend random atar)
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadedLogoUrl, setUploadedLogoUrl] = useState<string | null>(null);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState<boolean>(false);
 
   // TTBS Doğrulama Durumu
   const [ttbsResult, setTtbsResult] = useState<TTBSVerifyResult | null>(null);
@@ -119,7 +143,8 @@ export function AuthModule({
   const [loginEmail, setLoginEmail] = useState<string>('selim@baskentvizyon.com.tr');
   const [loginPassword, setLoginPassword] = useState<string>('123456');
 
-  // Genel Mesaj & Kullanıcı Listesi
+  // Alan Bazlı Validasyon Hataları (Kırmızı Inputlar) ve Genel Banner
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<{
     status: 'success' | 'error' | 'info' | 'warning';
     title: string;
@@ -127,6 +152,15 @@ export function AuthModule({
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [registeredUsers, setRegisteredUsers] = useState<UserSession[]>([]);
+
+  const clearFieldError = (fieldKey: string) => {
+    setFieldErrors((prev) => {
+      if (!prev[fieldKey]) return prev;
+      const next = { ...prev };
+      delete next[fieldKey];
+      return next;
+    });
+  };
 
   const fetchRegisteredUsers = async () => {
     try {
@@ -140,19 +174,153 @@ export function AuthModule({
     }
   };
 
+  const fetchProvinces = async () => {
+    try {
+      const res = await fetch('/api/locations/provinces');
+      if (res.ok) {
+        const data = (await res.json()) as { provinces: LocationOption[] };
+        setProvinces(data.provinces);
+      }
+    } catch {
+      // ignore offline error
+    }
+  };
+
   useEffect(() => {
     void fetchRegisteredUsers();
+    void fetchProvinces();
   }, []);
 
-  const handleVerifyTtbs = async (docNoToVerify?: string) => {
-    const targetNo = (docNoToVerify ?? ttbsDocumentNo).trim();
-    if (!targetNo) {
-      setFeedback({
-        status: 'warning',
-        title: 'Taşınmaz Ticareti Yetki Belgesi No Boş',
-        description:
-          'Lütfen T.C. Ticaret Bakanlığı TTBS sorgulaması için 7 haneli belge numarasını giriniz.',
+  const handleProvinceChange = async (provinceIdStr: string | null) => {
+    const val = provinceIdStr ?? '';
+    setSelectedProvinceId(val);
+    setSelectedDistrictId('');
+    setSelectedNeighborhood('');
+    setDistricts([]);
+    setNeighborhoods([]);
+    clearFieldError('city');
+    clearFieldError('district');
+    clearFieldError('neighborhood');
+
+    if (!val) return;
+    setIsLoadingDistricts(true);
+    try {
+      const res = await fetch(`/api/locations/districts?province_id=${val}`);
+      if (res.ok) {
+        const data = (await res.json()) as { districts: LocationOption[] };
+        setDistricts(data.districts);
+      }
+    } catch {
+      showToast({
+        body: 'İlçeler yüklenirken bağlantı hatası oluştu.',
+        type: 'error',
       });
+    } finally {
+      setIsLoadingDistricts(false);
+    }
+  };
+
+  const handleDistrictChange = async (districtIdStr: string | null) => {
+    const val = districtIdStr ?? '';
+    setSelectedDistrictId(val);
+    setSelectedNeighborhood('');
+    setNeighborhoods([]);
+    clearFieldError('district');
+    clearFieldError('neighborhood');
+
+    if (!val) return;
+    setIsLoadingNeighborhoods(true);
+    try {
+      const res = await fetch(`/api/locations/neighborhoods?district_id=${val}`);
+      if (res.ok) {
+        const data = (await res.json()) as { neighborhoods: LocationOption[] };
+        setNeighborhoods(data.neighborhoods);
+      }
+    } catch {
+      showToast({
+        body: 'Mahalle listesi yüklenirken bağlantı hatası oluştu.',
+        type: 'error',
+      });
+    } finally {
+      setIsLoadingNeighborhoods(false);
+    }
+  };
+
+  const handleLogoFileChange = async (files: File | File[] | null) => {
+    const selected = Array.isArray(files) ? files[0] ?? null : files;
+    setLogoError(null);
+
+    if (!selected) {
+      setLogoFile(null);
+      setUploadedLogoUrl(null);
+      return;
+    }
+
+    if (!ALLOWED_LOGO_TYPES.has(selected.type)) {
+      const msg =
+        'Desteklenmeyen dosya formatı. Yalnızca PNG, JPG/JPEG veya WEBP yükleyebilirsiniz.';
+      setLogoError(msg);
+      setLogoFile(null);
+      setUploadedLogoUrl(null);
+      showToast({ body: msg, type: 'error' });
+      return;
+    }
+
+    if (selected.size > MAX_LOGO_SIZE_BYTES) {
+      const mb = (selected.size / (1024 * 1024)).toFixed(2);
+      const msg = `Dosya boyutu maksimum 5 MB olabilir (Seçilen dosya: ${mb} MB).`;
+      setLogoError(msg);
+      setLogoFile(null);
+      setUploadedLogoUrl(null);
+      showToast({ body: msg, type: 'error' });
+      return;
+    }
+
+    setLogoFile(selected);
+    setIsUploadingLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selected);
+      const response = await fetch('/api/uploads/logo', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = (await response.json()) as {
+        url?: string;
+        detail?: string;
+      };
+      if (!response.ok || !data.url) {
+        const errMsg = data.detail ?? 'Logo yüklenemedi.';
+        setLogoError(errMsg);
+        setLogoFile(null);
+        setUploadedLogoUrl(null);
+        showToast({ body: errMsg, type: 'error' });
+        return;
+      }
+
+      setUploadedLogoUrl(data.url);
+      showToast({
+        body: `Emlak ofisi logosu yüklendi (${selected.name}).`,
+        type: 'info',
+      });
+    } catch {
+      const errMsg = 'Logo yüklenirken sunucuya ulaşılamadı.';
+      setLogoError(errMsg);
+      setLogoFile(null);
+      setUploadedLogoUrl(null);
+      showToast({ body: errMsg, type: 'error' });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleVerifyTtbs = async (docNoToVerify?: string) => {
+    const targetNo = formatDigitsOnly(docNoToVerify ?? ttbsDocumentNo, 7);
+    if (targetNo.length !== 7) {
+      const err =
+        'BR-01: Taşınmaz Ticareti Yetki Belgesi numarası 7 haneli sayısal olmalıdır (Örn: 0609412).';
+      setFieldErrors((prev) => ({ ...prev, ttbs_document_no: err }));
+      showToast({ body: err, type: 'error' });
       return;
     }
 
@@ -169,6 +337,16 @@ export function AuthModule({
       });
       const data = (await response.json()) as TTBSVerifyResult;
       setTtbsResult(data);
+      if (data.is_valid) {
+        clearFieldError('ttbs_document_no');
+        showToast({
+          body: `TTBS Doğrulandı: ${data.ttbs_document_no} (${data.province})`,
+          type: 'info',
+        });
+      } else {
+        setFieldErrors((prev) => ({ ...prev, ttbs_document_no: data.message }));
+        showToast({ body: data.message, type: 'error' });
+      }
       setFeedback({
         status: data.is_valid ? 'success' : 'error',
         title: data.is_valid
@@ -177,27 +355,28 @@ export function AuthModule({
         description: data.message,
       });
     } catch {
-      setFeedback({
-        status: 'error',
-        title: 'TTBS Servis Bağlantı Hatası',
-        description: 'Backend sunucusuna ulaşılamadı.',
+      showToast({
+        body: 'TTBS doğrulama servisine ulaşılamadı.',
+        type: 'error',
       });
     } finally {
       setIsVerifyingTtbs(false);
     }
   };
 
-  const handleFillSampleValidAgent = () => {
+  const handleFillSampleValidAgent = async () => {
     setRegisterRole('AGENT');
-    setFullName('Kemal Soylu');
+    setFieldErrors({});
+    setFirstName('Kemal');
+    setLastName('Soylu');
     setEmail('kemal@ankaraemlakmerkezi.com.tr');
-    setPassword('123456');
-    setPhone('0532 654 32 10');
+    setPassword('GibEmlak!2026');
+    setPhone('0 (532) 654 32 10');
     setTtbsDocumentNo('0609412');
-    setOfficePhone('0312 419 88 99');
+    setOfficePhone('0 (312) 419 88 99');
     setAgencyName('Ankara Emlak Merkezi & Yatırım');
-    setOfficeAddress('Tunalı Hilmi Cad. No:88/4 Çankaya / Ankara');
-    setLogoUrl(PRESET_LOGOS[0].value);
+    setAddressDetail('Tunalı Hilmi Cad. No:88 Kat:2 Daire:4');
+    await handleProvinceChange('6');
     void handleVerifyTtbs('0609412');
   };
 
@@ -207,67 +386,132 @@ export function AuthModule({
     void handleVerifyTtbs('9999999');
   };
 
+  const selectedCityName =
+    provinces.find((p) => String(p.id) === selectedProvinceId)?.name ?? '';
+  const selectedDistrictName =
+    districts.find((d) => String(d.id) === selectedDistrictId)?.name ?? '';
+
   const handleRegister = async () => {
-    setIsSubmitting(true);
     setFeedback(null);
+
+    const payload =
+      registerRole === 'AGENT'
+        ? {
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            password,
+            phone,
+            ttbs_document_no: ttbsDocumentNo,
+            agency_name: agencyName,
+            office_phone: officePhone,
+            city: selectedCityName,
+            district: selectedDistrictName,
+            neighborhood: selectedNeighborhood,
+            address_detail: addressDetail,
+          }
+        : {
+            first_name: firstName,
+            last_name: lastName,
+            email,
+            password,
+            phone,
+          };
+
+    // 1. İstemci (Zod) Form Doğrulaması — tüm eksik/hatalı inputlar kırmızıya döner
+    const parsed =
+      registerRole === 'AGENT'
+        ? registerAgentSchema.safeParse(payload)
+        : registerCustomerSchema.safeParse(payload);
+
+    if (!parsed.success) {
+      const errs = zodErrorsToMap(parsed.error);
+      setFieldErrors(errs);
+      const count = Object.keys(errs).length;
+      const summaryMsg = `Formda ${count} alanda eksik veya hatalı bilgi var. Kırmızı ile işaretlenen alanları düzeltiniz.`;
+      setFeedback({
+        status: 'error',
+        title: 'Form Doğrulama Hatası',
+        description: summaryMsg,
+      });
+      showToast({ body: summaryMsg, type: 'error' });
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          full_name: fullName,
-          email,
-          password,
-          phone,
+          ...payload,
           role: registerRole,
-          ttbs_document_no: registerRole === 'AGENT' ? ttbsDocumentNo : null,
-          office_phone: registerRole === 'AGENT' ? officePhone : null,
-          agency_name: registerRole === 'AGENT' ? agencyName : null,
-          logo_url: registerRole === 'AGENT' ? logoUrl : null,
-          office_address: registerRole === 'AGENT' ? officeAddress : null,
-          customer_type: registerRole === 'CUSTOMER' ? customerType : null,
+          logo_url: registerRole === 'AGENT' ? uploadedLogoUrl : null,
         }),
       });
 
       const data = (await response.json()) as {
         message?: string;
-        detail?: string;
+        detail?: unknown;
         user?: UserSession;
       };
 
       if (!response.ok) {
+        const apiErr = parseApiError(data);
+        setFieldErrors(apiErr.fieldErrors);
         setFeedback({
           status: 'error',
           title: 'Kayıt İşlemi Engellendi (İş Kuralı Denetimi)',
-          description: data.detail ?? 'Kayıt sırasında bir hata oluştu.',
+          description: apiErr.message,
         });
+        showToast({ body: apiErr.message, type: 'error' });
         return;
       }
 
       if (data.user) {
         onSelectSession(data.user);
       }
+      const okMsg = data.message ?? 'Hesabınız başarıyla oluşturuldu.';
       setFeedback({
         status: 'success',
         title: 'Kayıt Başarıyla Oluşturuldu ve Oturum Açıldı',
-        description: data.message ?? 'Hesabınız aktif edildi.',
+        description: okMsg,
       });
+      showToast({ body: okMsg, type: 'info' });
       await fetchRegisteredUsers();
       onDataChanged();
     } catch {
+      const netErr = 'Sunucuya bağlanılamadı. Backend servisinin çalıştığından emin olun.';
       setFeedback({
         status: 'error',
-        title: 'Sunucu Bağlantı Hatası',
-        description: 'FastAPI sunucusuna bağlanılamadı.',
+        title: 'Bağlantı Hatası',
+        description: netErr,
       });
+      showToast({ body: netErr, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleLogin = async () => {
-    setIsSubmitting(true);
     setFeedback(null);
+    const parsed = loginSchema.safeParse({
+      login_email: loginEmail,
+      login_password: loginPassword,
+    });
+    if (!parsed.success) {
+      const errs = zodErrorsToMap(parsed.error);
+      setFieldErrors(errs);
+      showToast({
+        body: 'Lütfen geçerli bir e-posta ve şifre giriniz.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
@@ -279,35 +523,48 @@ export function AuthModule({
       });
       const data = (await response.json()) as {
         message?: string;
-        detail?: string;
+        detail?: unknown;
         user?: UserSession;
       };
 
       if (!response.ok || !data.user) {
+        const apiErr = parseApiError(data);
+        setFieldErrors(apiErr.fieldErrors);
         setFeedback({
           status: 'error',
           title: 'Giriş Başarısız',
-          description: data.detail ?? 'E-posta veya şifre hatalı.',
+          description: apiErr.message,
         });
+        showToast({ body: apiErr.message, type: 'error' });
         return;
       }
 
       onSelectSession(data.user);
+      const okMsg = `${data.message ?? 'Giriş yapıldı.'}`;
       setFeedback({
         status: 'success',
         title: 'Oturum Açıldı',
-        description: `${data.message} Aktif Rol: ${data.user.role === 'AGENT' ? 'Emlakçı (İşletme Yetkilisi)' : 'Kayıtlı Müşteri'}`,
+        description: okMsg,
       });
+      showToast({ body: okMsg, type: 'info' });
     } catch {
+      const netErr = 'Sunucuya bağlanılamadı.';
       setFeedback({
         status: 'error',
-        title: 'Sunucu Bağlantı Hatası',
-        description: 'FastAPI sunucusuna bağlanılamadı.',
+        title: 'Bağlantı Hatası',
+        description: netErr,
       });
+      showToast({ body: netErr, type: 'error' });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  // Şifre kuralı canlı göstergeleri
+  const hasMinLen = password.length >= 8;
+  const hasLetter = /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(password);
+  const hasDigit = /\d/.test(password);
+  const hasSymbol = /[^A-Za-z0-9ÇĞİÖŞÜçğıöşü\s]/.test(password);
 
   const userColumns: TableColumn<UserSession>[] = [
     {
@@ -345,11 +602,18 @@ export function AuthModule({
     },
     {
       key: 'agency',
-      header: 'Emlak Ofisi & TTBS Belge No (BR-01)',
+      header: 'Emlak Ofisi, Konum & TTBS Belge No',
       renderCell: (u) =>
         u.agency ? (
           <HStack gap={1} vAlign="center" wrap="wrap">
             <Text weight="medium">{u.agency.name}</Text>
+            {u.agency.city && (
+              <Token
+                label={`${u.agency.district ?? ''} / ${u.agency.city}`}
+                color="gray"
+                size="sm"
+              />
+            )}
             <Token
               label={`TTBS: ${u.agency.ttbs_document_no}`}
               color="green"
@@ -357,11 +621,7 @@ export function AuthModule({
             />
           </HStack>
         ) : (
-          <Text color="secondary">
-            {u.customer
-              ? `Bireysel Müşteri (${u.customer.customer_type})`
-              : 'Bireysel Müşteri'}
-          </Text>
+          <Text color="secondary">Bireysel Müşteri</Text>
         ),
     },
     {
@@ -369,21 +629,15 @@ export function AuthModule({
       header: 'Hızlı Oturum Geçişi',
       renderCell: (u) => (
         <Button
-          label={
-            currentUser.id === u.id ? 'Aktif Oturum' : 'Bu Hesaba Geç'
-          }
+          label={currentUser.id === u.id ? 'Aktif Oturum' : 'Bu Hesaba Geç'}
           variant={currentUser.id === u.id ? 'secondary' : 'primary'}
           size="sm"
           isDisabled={currentUser.id === u.id}
           onClick={() => {
             onSelectSession(u);
-            setFeedback({
-              status: 'info',
-              title: `Aktif Hesap Değiştirildi: ${u.full_name}`,
-              description:
-                u.role === 'AGENT' && u.agency
-                  ? `${u.agency.name} (Yetki Belge No: ${u.agency.ttbs_document_no}) olarak emlakçı panelini yönetiyorsunuz.`
-                  : 'Kayıtlı müşteri oturumuna geçildi.',
+            showToast({
+              body: `Aktif hesap değiştirildi: ${u.full_name}`,
+              type: 'info',
             });
           }}
         />
@@ -397,7 +651,7 @@ export function AuthModule({
         <VStack gap={3}>
           <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
             <VStack gap={0.5}>
-              <HStack gap={1.5} vAlign="center">
+              <HStack gap={1.5} vAlign="center" wrap="wrap">
                 <Token label="PARÇA P2" color="blue" />
                 <Token
                   label={
@@ -421,9 +675,8 @@ export function AuthModule({
                 Doğrulama
               </Heading>
               <Text color="secondary" size="sm">
-                Ortak kayıt alanları (Ad/Soyad, Tekil E-posta, Şifre, Cep Tel)
-                ve Emlakçıya özel alanlar (Taşınmaz Ticareti Yetki Belge No,
-                Ofis Telefonu, Ofis İsmi ve Logosu).
+                Zod form doğrulama, telefon maskeleme, 8+ karakter güçlü şifre,
+                Türkiye İl–İlçe–Mahalle seçimi ve 5 MB kurumsal logo yükleme.
               </Text>
             </VStack>
 
@@ -433,11 +686,9 @@ export function AuthModule({
                 variant={currentUser.role === 'VISITOR' ? 'primary' : 'secondary'}
                 onClick={() => {
                   onSelectSession(VISITOR_SESSION);
-                  setFeedback({
-                    status: 'info',
-                    title: 'Ziyaretçi (Girişsiz) Modu Aktif (BR-08)',
-                    description:
-                      'Kayıt olmadan tüm emlakçı ilanlarını görebilir ve klasik filtreleme yapabilirsiniz. Randevu alma, favorilere ekleme ve AI doğal dil arama için giriş yapılmalıdır.',
+                  showToast({
+                    body: 'Ziyaretçi (girişsiz) moduna geçildi.',
+                    type: 'info',
                   });
                 }}
               />
@@ -459,17 +710,15 @@ export function AuthModule({
         <VStack gap={4}>
           <TabList
             value={activeTab}
-            onChange={(val) => setActiveTab(val)}
+            onChange={(val) => {
+              setActiveTab(val);
+              setFieldErrors({});
+              setFeedback(null);
+            }}
             hasDivider
           >
-            <Tab
-              value="register"
-              label="Yeni Kayıt Ol (Emlakçı / Müşteri)"
-            />
-            <Tab
-              value="login"
-              label="Giriş Yap (Mevcut Hesap)"
-            />
+            <Tab value="register" label="Yeni Kayıt Ol (Emlakçı / Müşteri)" />
+            <Tab value="login" label="Giriş Yap (Mevcut Hesap)" />
           </TabList>
 
           {activeTab === 'register' ? (
@@ -479,12 +728,18 @@ export function AuthModule({
                   <Button
                     label="Emlakçı Kaydı (Yetki Belgeli İşletme)"
                     variant={registerRole === 'AGENT' ? 'primary' : 'secondary'}
-                    onClick={() => setRegisterRole('AGENT')}
+                    onClick={() => {
+                      setRegisterRole('AGENT');
+                      setFieldErrors({});
+                    }}
                   />
                   <Button
-                    label="Müşteri Kaydı (Alıcı / Kiracı / Mülk Sahibi)"
+                    label="Müşteri Kaydı (Bireysel Üyelik)"
                     variant={registerRole === 'CUSTOMER' ? 'primary' : 'secondary'}
-                    onClick={() => setRegisterRole('CUSTOMER')}
+                    onClick={() => {
+                      setRegisterRole('CUSTOMER');
+                      setFieldErrors({});
+                    }}
                   />
                 </HStack>
 
@@ -494,10 +749,10 @@ export function AuthModule({
                       label="Örnek Geçerli Emlakçı Doldur (0609412)"
                       variant="ghost"
                       size="sm"
-                      onClick={handleFillSampleValidAgent}
+                      onClick={() => void handleFillSampleValidAgent()}
                     />
                     <Button
-                      label="Geçersiz Belge Test Et (İstisnai Senaryo)"
+                      label="Geçersiz Belge Test Et (9999999)"
                       variant="ghost"
                       size="sm"
                       onClick={handleTestInvalidTtbs}
@@ -506,79 +761,127 @@ export function AuthModule({
                 )}
               </HStack>
 
-              <Grid columns={{ minWidth: 320, max: 2 }} gap={4}>
+              <Grid columns={{ minWidth: 340, max: 2 }} gap={4}>
                 <Card padding={4}>
                   <VStack gap={3}>
                     <HStack gap={1} vAlign="center">
                       <Token label="ORTAK ALANLAR" color="blue" />
-                      <Heading level={3}>
-                        Temel Kullanıcı Bilgileri (Emlakçı & Müşteri Ortak)
-                      </Heading>
+                      <Heading level={3}>Temel Kullanıcı Bilgileri</Heading>
                     </HStack>
                     <Divider />
 
-                    <TextInput
-                      label="Ad ve Soyad"
-                      placeholder="Örn: Kemal Soylu"
-                      value={fullName}
-                      onChange={(val) => setFullName(val)}
-                      isRequired
-                    />
+                    <Grid columns={{ minWidth: 160, max: 2 }} gap={2}>
+                      <TextInput
+                        label="Ad"
+                        placeholder="Örn: Kemal"
+                        value={firstName}
+                        onChange={(val) => {
+                          setFirstName(sanitizeNameInput(val));
+                          clearFieldError('first_name');
+                        }}
+                        status={
+                          fieldErrors.first_name
+                            ? { type: 'error', message: fieldErrors.first_name }
+                            : undefined
+                        }
+                        isRequired
+                      />
+
+                      <TextInput
+                        label="Soyad"
+                        placeholder="Örn: Soylu"
+                        value={lastName}
+                        onChange={(val) => {
+                          setLastName(sanitizeNameInput(val));
+                          clearFieldError('last_name');
+                        }}
+                        status={
+                          fieldErrors.last_name
+                            ? { type: 'error', message: fieldErrors.last_name }
+                            : undefined
+                        }
+                        isRequired
+                      />
+                    </Grid>
 
                     <TextInput
                       type="email"
-                      label="E-Posta Adresi (Tek Kayıt Kuralı - BR-02)"
-                      description="Her e-posta adresi ile sistemde yalnızca tek bir hesap açılabilir."
+                      label="E-Posta Adresi (Tek Kayıt - BR-02)"
+                      description="Her e-posta adresi ile sistemde yalnızca tek kayıt açılabilir."
                       placeholder="ornek@eposta.com"
                       value={email}
-                      onChange={(val) => setEmail(val)}
+                      onChange={(val) => {
+                        setEmail(val);
+                        clearFieldError('email');
+                      }}
+                      status={
+                        fieldErrors.email
+                          ? { type: 'error', message: fieldErrors.email }
+                          : undefined
+                      }
                       isRequired
                     />
 
-                    <TextInput
-                      type="password"
-                      label="Şifre Oluştur"
-                      placeholder="En az 4 karakterli şifre"
-                      value={password}
-                      onChange={(val) => setPassword(val)}
-                      isRequired
-                    />
+                    <VStack gap={1}>
+                      <TextInput
+                        type="password"
+                        label="Şifre Oluştur"
+                        description="En az 8 karakter; en az 1 harf, 1 rakam ve 1 sembol içermelidir."
+                        placeholder="Örn: GibEmlak!2026"
+                        value={password}
+                        onChange={(val) => {
+                          setPassword(val);
+                          clearFieldError('password');
+                        }}
+                        status={
+                          fieldErrors.password
+                            ? { type: 'error', message: fieldErrors.password }
+                            : undefined
+                        }
+                        isRequired
+                      />
+                      <HStack gap={1} wrap="wrap">
+                        <Token
+                          label="8+ Karakter"
+                          size="sm"
+                          color={hasMinLen ? 'green' : 'gray'}
+                        />
+                        <Token
+                          label="Harf"
+                          size="sm"
+                          color={hasLetter ? 'green' : 'gray'}
+                        />
+                        <Token
+                          label="Rakam"
+                          size="sm"
+                          color={hasDigit ? 'green' : 'gray'}
+                        />
+                        <Token
+                          label="Sembol (!@#.)"
+                          size="sm"
+                          color={hasSymbol ? 'green' : 'gray'}
+                        />
+                      </HStack>
+                    </VStack>
 
                     <TextInput
                       type="tel"
+                      inputMode="tel"
                       label="Cep Telefonu Numarası"
-                      placeholder="0532 000 00 00"
+                      description="Yalnızca rakam kabul eder ve otomatik formatlanır."
+                      placeholder="0 (532) 123 45 67"
                       value={phone}
-                      onChange={(val) => setPhone(val)}
+                      onChange={(val) => {
+                        setPhone(formatTurkishPhone(val));
+                        clearFieldError('phone');
+                      }}
+                      status={
+                        fieldErrors.phone
+                          ? { type: 'error', message: fieldErrors.phone }
+                          : undefined
+                      }
                       isRequired
                     />
-
-                    {registerRole === 'CUSTOMER' && (
-                      <Selector
-                        label="Müşteri Profil Grubu"
-                        description="Arama ve randevu tercihleriniz için varsayılan müşteri grubunuz."
-                        value={customerType}
-                        onChange={(val) => setCustomerType(val ?? 'ALICI')}
-                        options={[
-                          {
-                            value: 'ALICI',
-                            label: 'Alıcı Müşteri (Satılık Ev Arayan)',
-                          },
-                          {
-                            value: 'KIRACI',
-                            label: 'Kiracı Müşteri (Kiralık Ev Arayan)',
-                          },
-                          {
-                            value: 'SATICI',
-                            label: 'Satıcı (Evini Satmak İsteyen Mülk Sahibi)',
-                          },
-                          {
-                            value: 'KIRALAYAN',
-                            label: 'Kiralık Mülk Sahibi (Evini Kiraya Veren)',
-                          },
-                        ]}
-                      />
-                    )}
                   </VStack>
                 </Card>
 
@@ -586,36 +889,45 @@ export function AuthModule({
                   <Card padding={4}>
                     <VStack gap={3}>
                       <HStack gap={1} vAlign="center">
-                        <Token label="EMLAKÇIYA ÖZEL ALANLAR" color="purple" />
+                        <Token label="EMLAKÇIYA ÖZEL" color="purple" />
                         <Heading level={3}>
-                          Yetki Belgesi & Emlak Ofisi Bilgileri
+                          TTBS Yetki Belgesi, Ofis Adresi & Logo
                         </Heading>
                       </HStack>
                       <Divider />
 
                       <VStack gap={1.5}>
                         <TextInput
-                          label="Taşınmaz Ticareti Yetki Belgesi No (BR-01)"
-                          description="T.C. Ticaret Bakanlığı TTBS üzerinden 7 haneli il kodlu belge numarası çekilerek doğrulanır."
+                          inputMode="numeric"
+                          label="Taşınmaz Ticareti Yetki Belgesi No (7 Haneli - BR-01)"
+                          description="T.C. Ticaret Bakanlığı TTBS resmi formatı: İlk 2 hane il plaka kodu olmak üzere 7 haneli sayısal belge no."
                           placeholder="Örn: 0609412"
                           value={ttbsDocumentNo}
                           onChange={(val) => {
-                            setTtbsDocumentNo(val);
+                            setTtbsDocumentNo(formatDigitsOnly(val, 7));
                             setTtbsResult(null);
+                            clearFieldError('ttbs_document_no');
                           }}
                           status={
-                            ttbsResult
+                            fieldErrors.ttbs_document_no
                               ? {
-                                  type: ttbsResult.is_valid ? 'success' : 'error',
-                                  message: ttbsResult.message,
+                                  type: 'error',
+                                  message: fieldErrors.ttbs_document_no,
                                 }
-                              : undefined
+                              : ttbsResult
+                                ? {
+                                    type: ttbsResult.is_valid
+                                      ? 'success'
+                                      : 'error',
+                                    message: ttbsResult.message,
+                                  }
+                                : undefined
                           }
                           isRequired
                         />
                         <HStack>
                           <Button
-                            label="Ticaret Bakanlığı TTBS Yetki Belgesini Doğrula"
+                            label="Ticaret Bakanlığı TTBS Doğrula"
                             variant="secondary"
                             size="sm"
                             isLoading={isVerifyingTtbs}
@@ -628,78 +940,219 @@ export function AuthModule({
                         label="Emlak Ofisi İsmi (İşletme Adı)"
                         placeholder="Örn: Ankara Emlak Merkezi & Yatırım"
                         value={agencyName}
-                        onChange={(val) => setAgencyName(val)}
+                        onChange={(val) => {
+                          setAgencyName(val);
+                          clearFieldError('agency_name');
+                        }}
+                        status={
+                          fieldErrors.agency_name
+                            ? {
+                                type: 'error',
+                                message: fieldErrors.agency_name,
+                              }
+                            : undefined
+                        }
                         isRequired
                       />
 
                       <TextInput
                         type="tel"
+                        inputMode="tel"
                         label="Emlak Ofisi Sabit Telefon No"
-                        placeholder="Örn: 0312 419 88 99"
+                        placeholder="0 (312) 419 88 99"
                         value={officePhone}
-                        onChange={(val) => setOfficePhone(val)}
+                        onChange={(val) => {
+                          setOfficePhone(formatTurkishPhone(val));
+                          clearFieldError('office_phone');
+                        }}
+                        status={
+                          fieldErrors.office_phone
+                            ? {
+                                type: 'error',
+                                message: fieldErrors.office_phone,
+                              }
+                            : undefined
+                        }
                         isRequired
                       />
 
-                      <Selector
-                        label="Emlak Ofisi Kurumsal Logosu Seçimi"
-                        value={logoUrl}
-                        onChange={(val) =>
-                          setLogoUrl(val ?? PRESET_LOGOS[0].value)
-                        }
-                        options={PRESET_LOGOS}
-                      />
+                      <Grid columns={{ minWidth: 160, max: 3 }} gap={2}>
+                        <Selector
+                          label="İl"
+                          placeholder="İl seçiniz..."
+                          hasSearch
+                          hasClear
+                          searchPlaceholder="İl ara..."
+                          value={selectedProvinceId || null}
+                          onChange={(val) => void handleProvinceChange(val)}
+                          options={provinces.map((p) => ({
+                            value: String(p.id),
+                            label: p.name,
+                          }))}
+                          status={
+                            fieldErrors.city
+                              ? { type: 'error', message: fieldErrors.city }
+                              : undefined
+                          }
+                          isRequired
+                        />
 
-                      <HStack gap={2} vAlign="center">
-                        <Avatar
-                          name={agencyName || 'Emlak Ofisi'}
-                          src={logoUrl}
-                          size="lg"
-                          shape="rounded"
+                        <Selector
+                          label="İlçe"
+                          placeholder={
+                            selectedProvinceId
+                              ? 'İlçe seçiniz...'
+                              : 'Önce il seçin'
+                          }
+                          hasSearch
+                          hasClear
+                          searchPlaceholder="İlçe ara..."
+                          isDisabled={!selectedProvinceId}
+                          isLoading={isLoadingDistricts}
+                          value={selectedDistrictId || null}
+                          onChange={(val) => void handleDistrictChange(val)}
+                          options={districts.map((d) => ({
+                            value: String(d.id),
+                            label: d.name,
+                          }))}
+                          status={
+                            fieldErrors.district
+                              ? { type: 'error', message: fieldErrors.district }
+                              : undefined
+                          }
+                          isRequired
                         />
-                        <TextInput
-                          label="Veya Özel Ofis Logo Görsel URL"
-                          placeholder="https://..."
-                          value={logoUrl}
-                          onChange={(val) => setLogoUrl(val)}
+
+                        <Selector
+                          label="Mahalle"
+                          placeholder={
+                            selectedDistrictId
+                              ? 'Mahalle seçiniz...'
+                              : 'Önce ilçe seçin'
+                          }
+                          hasSearch
+                          hasClear
+                          searchPlaceholder="Mahalle ara..."
+                          isDisabled={!selectedDistrictId}
+                          isLoading={isLoadingNeighborhoods}
+                          value={selectedNeighborhood || null}
+                          onChange={(val) => {
+                            setSelectedNeighborhood(val ?? '');
+                            clearFieldError('neighborhood');
+                          }}
+                          options={neighborhoods.map((n) => ({
+                            value: n.name,
+                            label: n.name,
+                          }))}
+                          status={
+                            fieldErrors.neighborhood
+                              ? {
+                                  type: 'error',
+                                  message: fieldErrors.neighborhood,
+                                }
+                              : undefined
+                          }
+                          isRequired
                         />
-                      </HStack>
+                      </Grid>
 
                       <TextInput
-                        label="Emlak Ofisi Açık Adresi"
-                        placeholder="Örn: Tunalı Hilmi Cad. No:88/4 Çankaya / Ankara"
-                        value={officeAddress}
-                        onChange={(val) => setOfficeAddress(val)}
-                        isOptional
+                        label="Açık Adres Detayı (Cadde / Sokak / Kapı No)"
+                        placeholder="Örn: Tunalı Hilmi Cad. No:88 Kat:2 Daire:4"
+                        value={addressDetail}
+                        onChange={(val) => {
+                          setAddressDetail(val);
+                          clearFieldError('address_detail');
+                        }}
+                        status={
+                          fieldErrors.address_detail
+                            ? {
+                                type: 'error',
+                                message: fieldErrors.address_detail,
+                              }
+                            : undefined
+                        }
+                        isRequired
                       />
+
+                      <VStack gap={2}>
+                        <FileInput
+                          mode="dropzone"
+                          label="Emlak Ofisi Logosu Yükle"
+                          description="Kabul edilen formatlar: PNG, JPG/JPEG, WEBP · Maksimum dosya boyutu: 5 MB. Görsel yüklemezseniz kurumsal varsayılan logolardan biri rastgele atanır."
+                          accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+                          maxSize={MAX_LOGO_SIZE_BYTES}
+                          value={logoFile}
+                          isLoading={isUploadingLogo}
+                          isOptional
+                          placeholder="Logo dosyasını sürükleyip bırakın veya seçin (PNG, JPG, WEBP · Max 5 MB)"
+                          onChange={(files) => void handleLogoFileChange(files)}
+                          status={
+                            logoError
+                              ? { type: 'error', message: logoError }
+                              : uploadedLogoUrl
+                                ? {
+                                    type: 'success',
+                                    message:
+                                      'Logo yüklendi. İsterseniz önizleme üzerinden kaldırıp değiştirebilirsiniz.',
+                                  }
+                                : undefined
+                          }
+                        />
+
+                        {uploadedLogoUrl && (
+                          <HStack gap={2} vAlign="center">
+                            <Thumbnail
+                              src={uploadedLogoUrl}
+                              alt={agencyName || 'Emlak Ofisi Logosu'}
+                              label={logoFile?.name ?? 'Ofis Logosu'}
+                              showRemoveOn="always"
+                              onRemove={() => {
+                                setLogoFile(null);
+                                setUploadedLogoUrl(null);
+                                setLogoError(null);
+                              }}
+                            />
+                            <VStack gap={0.5}>
+                              <Text weight="semibold" size="sm">
+                                Yüklenen Ofis Logosu Önizlemesi
+                              </Text>
+                              <Text color="secondary" size="sm">
+                                {logoFile
+                                  ? `${logoFile.name} (${(logoFile.size / 1024).toFixed(0)} KB)`
+                                  : 'Özel kurumsal logo aktif'}
+                              </Text>
+                            </VStack>
+                          </HStack>
+                        )}
+                      </VStack>
                     </VStack>
                   </Card>
                 ) : (
                   <Card padding={4}>
                     <VStack gap={3}>
-                      <Token label="MÜŞTERİ YETKİLERİ (BR-08)" color="teal" />
+                      <Token label="BİREYSEL MÜŞTERİ ÜYELİĞİ" color="teal" />
                       <Heading level={3}>
-                        Kayıtlı Müşteri Avantajları vs Ziyaretçi Modu
+                        Tek Hesapla Tüm İşlemler (BR-08)
                       </Heading>
                       <Divider />
                       <Text color="secondary">
-                        • Giriş yapmadan (Ziyaretçi modunda) tüm emlakçıların
-                        aktif ilanlarını görebilir ve klasik filtreleme
-                        yapabilirsiniz.
+                        • Kayıt olurken kategori seçmenize gerek yoktur; giriş
+                        yaptıktan sonra dilediğiniz gibi satılık veya kiralık
+                        ilanları filtreleyebilirsiniz.
                       </Text>
                       <Text color="secondary">
-                        • Kayıt olup giriş yaptığınızda hayalinizdeki evi doğal
-                        dille tasvir ederek Yapay Zeka (AI) Akıllı Arama
-                        yapabilirsiniz.
+                        • Hayalinizdeki evi doğal dille tasvir ederek Yapay Zeka
+                        (AI) Akıllı Arama özelliğini kullanabilirsiniz.
                       </Text>
                       <Text color="secondary">
-                        • Beğendiğiniz ilanları Favorilerinize ekleyebilir,
-                        emlakçının müsait saatlerini görerek Fiziki veya Telefon
-                        randevusu alabilirsiniz.
+                        • Beğendiğiniz ilanları Favorilere ekleyebilir,
+                        emlakçıların müsait saatlerini görerek Fiziki veya
+                        Telefon randevusu oluşturabilirsiniz.
                       </Text>
                       <Text color="secondary">
                         • Evinizi satmak veya kiraya vermek istediğinizde yetki
-                        belgeli emlak ofislerini listeleyip başvuru
+                        belgeli emlak ofislerini listeleyip doğrudan başvuru
                         yapabilirsiniz.
                       </Text>
                     </VStack>
@@ -730,14 +1183,30 @@ export function AuthModule({
                     type="email"
                     label="E-Posta Adresi"
                     value={loginEmail}
-                    onChange={(val) => setLoginEmail(val)}
+                    onChange={(val) => {
+                      setLoginEmail(val);
+                      clearFieldError('login_email');
+                    }}
+                    status={
+                      fieldErrors.login_email
+                        ? { type: 'error', message: fieldErrors.login_email }
+                        : undefined
+                    }
                     isRequired
                   />
                   <TextInput
                     type="password"
                     label="Şifre"
                     value={loginPassword}
-                    onChange={(val) => setLoginPassword(val)}
+                    onChange={(val) => {
+                      setLoginPassword(val);
+                      clearFieldError('login_password');
+                    }}
+                    status={
+                      fieldErrors.login_password
+                        ? { type: 'error', message: fieldErrors.login_password }
+                        : undefined
+                    }
                     isRequired
                   />
                   <HStack gap={1.5} wrap="wrap">
@@ -771,6 +1240,7 @@ export function AuthModule({
                       onClick={() => {
                         setLoginEmail('selim@baskentvizyon.com.tr');
                         setLoginPassword('123456');
+                        setFieldErrors({});
                       }}
                     />
                     <Button
@@ -779,14 +1249,16 @@ export function AuthModule({
                       onClick={() => {
                         setLoginEmail('ayse@bogaziciprestij.com.tr');
                         setLoginPassword('123456');
+                        setFieldErrors({});
                       }}
                     />
                     <Button
-                      label="Kayıtlı Müşteri: Zeynep Kaya (Kiralık Arayan Kiracı)"
+                      label="Kayıtlı Müşteri: Zeynep Kaya"
                       variant="secondary"
                       onClick={() => {
                         setLoginEmail('zeynep.kaya@ornekmail.com');
                         setLoginPassword('123456');
+                        setFieldErrors({});
                       }}
                     />
                   </VStack>
@@ -805,8 +1277,7 @@ export function AuthModule({
             </Heading>
             <Text color="secondary" size="sm">
               Yeni kayıt olduğunuzda hesabınız anında PostgreSQL users ve
-              agencies tablolarına eklenir. Tablodan tek tıkla aktif oturumu
-              değiştirebilirsiniz.
+              agencies tablolarına eklenir.
             </Text>
           </VStack>
           <Divider />
