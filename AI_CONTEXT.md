@@ -43,8 +43,12 @@ Uygulama şu uçtan uca senaryoyu her zaman kusursuz çalıştırmalıdır:
 - **Astryx Zorunlu Kuralları:**
   1. `frontend/AGENTS.md` içindeki kurallara her zaman uyulacak.
   2. `src/main.tsx` içinde `@astryxdesign/core/reset.css` ve `@astryxdesign/core/astryx.css` importları ile `<Theme theme={themes[defaultThemeSlug]}>` sarmalayıcısı korunacak.
-  3. Raw `<div>` veya `<span>` KULLANILMAYACAK — tüm yerleşim ve metinler Astryx bileşenleriyle (`AppShell`, `SideNav`, `Layout`, `Section`, `VStack`, `HStack`, `Grid`, `Card`, `Table`, `Drawer`, `Modal`, `Tabs`, `Text`, `Heading`, `Button`, `Token`, `Badge`, `Banner`, `TextInput`, `Select` vb.) kurulacak.
-  4. Her parçanın tesliminden önce `cd frontend && npm run build && npm run astryx -- doctor --built .` çalıştırılıp **0 fail** olduğu doğrulanacak.
+  3. Raw `<div>` veya `<span>` KULLANILMAYACAK — tüm yerleşim ve metinler Astryx bileşenleriyle kurulacak.
+  4. **Atomic Klasör & Temiz UI Kuralı:**
+     - `src/types/` (ortak tipler), `src/api/` (merkezi `apiRequest` istemcisi ve servisler), `src/utils/` (`formatters.ts`, `validation.ts`), `src/components/common/` (`LocationPicker`, `LogoUploader`, `PageHeader`), `src/components/layout/` (`AppLayout`, `NavContent`), `src/pages/` (ekran sayfaları).
+     - Gereksiz `Token`/badge kalabalığı yapılmayacak; `isRequired`/`isOptional` yerine zorunlu alanlarda `*` ve form altında `* işaretli alanlar zorunludur.` notu kullanılacak.
+     - Mobil uyumluluk için `Grid` kolonlarında `minWidth <= 260`, tüm `Table` bileşenlerinde `HStack isScrollable` ve `AppShell` üzerinde `MobileNav` + `MobileNavToggle` korunacak.
+  5. Her parçanın tesliminden önce `cd frontend && npm run build && npm run astryx -- doctor --built .` çalıştırılıp **0 fail** olduğu doğrulanacak.
 
 ---
 
