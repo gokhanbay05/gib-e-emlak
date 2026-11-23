@@ -95,7 +95,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P3` — İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi (GİB 1. Madde) ⏳
+### `P3` — İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi (GİB 1. Madde) ✅
 - **Kapsam:**
   - Programı kullanan emlak işletmesinin tüm kurumsal bilgilerinin görüntülendiği ve güncellendiği ekran:
     - **Alanlar:** İşletme Adı (Emlak Ofisi İsmi), Yetkili Kişi Adı Soyadı, Açık Adres, Ofis Sabit Telefonu, Cep Telefonu, Fax, Vergi Dairesi / Vergi No, Taşınmaz Ticareti Yetki Belgesi No (doğrulanmış durum rozeti), Emlak Ofisi Logosu ve Kurumsal Tanıtım Yazısı.

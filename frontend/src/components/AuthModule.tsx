@@ -9,7 +9,6 @@ import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Section } from '@astryxdesign/core/Section';
-import { Selector } from '@astryxdesign/core/Selector';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
@@ -28,6 +27,7 @@ import {
   sanitizeNameInput,
   zodErrorsToMap,
 } from '../utils/validation';
+import { TurkishLocationPicker } from './TurkishLocationPicker';
 
 export interface SessionAgency {
   id: number;
@@ -72,11 +72,6 @@ interface TTBSVerifyResult {
   message: string;
 }
 
-interface LocationOption {
-  id: number;
-  name: string;
-}
-
 interface AuthModuleProps {
   currentUser: UserSession;
   onSelectSession: (session: UserSession) => void;
@@ -119,15 +114,10 @@ export function AuthModule({
   const [agencyName, setAgencyName] = useState<string>('');
 
   // Yapısal Adres (İl -> İlçe -> Mahalle -> Açık Adres Detayı)
-  const [provinces, setProvinces] = useState<LocationOption[]>([]);
-  const [districts, setDistricts] = useState<LocationOption[]>([]);
-  const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
-  const [selectedProvinceId, setSelectedProvinceId] = useState<string>('');
-  const [selectedDistrictId, setSelectedDistrictId] = useState<string>('');
+  const [selectedCity, setSelectedCity] = useState<string>('');
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('');
   const [selectedNeighborhood, setSelectedNeighborhood] = useState<string>('');
   const [addressDetail, setAddressDetail] = useState<string>('');
-  const [isLoadingDistricts, setIsLoadingDistricts] = useState<boolean>(false);
-  const [isLoadingNeighborhoods, setIsLoadingNeighborhoods] = useState<boolean>(false);
 
   // Logo Dosya Yükleme (Max 5 MB, PNG/JPG/WEBP, yüklenmezse backend random atar)
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -174,77 +164,9 @@ export function AuthModule({
     }
   };
 
-  const fetchProvinces = async () => {
-    try {
-      const res = await fetch('/api/locations/provinces');
-      if (res.ok) {
-        const data = (await res.json()) as { provinces: LocationOption[] };
-        setProvinces(data.provinces);
-      }
-    } catch {
-      // ignore offline error
-    }
-  };
-
   useEffect(() => {
     void fetchRegisteredUsers();
-    void fetchProvinces();
   }, []);
-
-  const handleProvinceChange = async (provinceIdStr: string | null) => {
-    const val = provinceIdStr ?? '';
-    setSelectedProvinceId(val);
-    setSelectedDistrictId('');
-    setSelectedNeighborhood('');
-    setDistricts([]);
-    setNeighborhoods([]);
-    clearFieldError('city');
-    clearFieldError('district');
-    clearFieldError('neighborhood');
-
-    if (!val) return;
-    setIsLoadingDistricts(true);
-    try {
-      const res = await fetch(`/api/locations/districts?province_id=${val}`);
-      if (res.ok) {
-        const data = (await res.json()) as { districts: LocationOption[] };
-        setDistricts(data.districts);
-      }
-    } catch {
-      showToast({
-        body: 'İlçeler yüklenirken bağlantı hatası oluştu.',
-        type: 'error',
-      });
-    } finally {
-      setIsLoadingDistricts(false);
-    }
-  };
-
-  const handleDistrictChange = async (districtIdStr: string | null) => {
-    const val = districtIdStr ?? '';
-    setSelectedDistrictId(val);
-    setSelectedNeighborhood('');
-    setNeighborhoods([]);
-    clearFieldError('district');
-    clearFieldError('neighborhood');
-
-    if (!val) return;
-    setIsLoadingNeighborhoods(true);
-    try {
-      const res = await fetch(`/api/locations/neighborhoods?district_id=${val}`);
-      if (res.ok) {
-        const data = (await res.json()) as { neighborhoods: LocationOption[] };
-        setNeighborhoods(data.neighborhoods);
-      }
-    } catch {
-      showToast({
-        body: 'Mahalle listesi yüklenirken bağlantı hatası oluştu.',
-        type: 'error',
-      });
-    } finally {
-      setIsLoadingNeighborhoods(false);
-    }
-  };
 
   const handleLogoFileChange = async (files: File | File[] | null) => {
     const selected = Array.isArray(files) ? files[0] ?? null : files;
@@ -364,7 +286,7 @@ export function AuthModule({
     }
   };
 
-  const handleFillSampleValidAgent = async () => {
+  const handleFillSampleValidAgent = () => {
     setRegisterRole('AGENT');
     setFieldErrors({});
     setFirstName('Kemal');
@@ -375,8 +297,10 @@ export function AuthModule({
     setTtbsDocumentNo('0609412');
     setOfficePhone('0 (312) 419 88 99');
     setAgencyName('Ankara Emlak Merkezi & Yatırım');
+    setSelectedCity('Ankara');
+    setSelectedDistrict('Çankaya');
+    setSelectedNeighborhood('Kızılırmak Mah.');
     setAddressDetail('Tunalı Hilmi Cad. No:88 Kat:2 Daire:4');
-    await handleProvinceChange('6');
     void handleVerifyTtbs('0609412');
   };
 
@@ -385,11 +309,6 @@ export function AuthModule({
     setTtbsDocumentNo('9999999');
     void handleVerifyTtbs('9999999');
   };
-
-  const selectedCityName =
-    provinces.find((p) => String(p.id) === selectedProvinceId)?.name ?? '';
-  const selectedDistrictName =
-    districts.find((d) => String(d.id) === selectedDistrictId)?.name ?? '';
 
   const handleRegister = async () => {
     setFeedback(null);
@@ -405,8 +324,8 @@ export function AuthModule({
             ttbs_document_no: ttbsDocumentNo,
             agency_name: agencyName,
             office_phone: officePhone,
-            city: selectedCityName,
-            district: selectedDistrictName,
+            city: selectedCity,
+            district: selectedDistrict,
             neighborhood: selectedNeighborhood,
             address_detail: addressDetail,
           }
@@ -976,85 +895,24 @@ export function AuthModule({
                         isRequired
                       />
 
-                      <Grid columns={{ minWidth: 160, max: 3 }} gap={2}>
-                        <Selector
-                          label="İl"
-                          placeholder="İl seçiniz..."
-                          hasSearch
-                          hasClear
-                          searchPlaceholder="İl ara..."
-                          value={selectedProvinceId || null}
-                          onChange={(val) => void handleProvinceChange(val)}
-                          options={provinces.map((p) => ({
-                            value: String(p.id),
-                            label: p.name,
-                          }))}
-                          status={
-                            fieldErrors.city
-                              ? { type: 'error', message: fieldErrors.city }
-                              : undefined
-                          }
-                          isRequired
-                        />
-
-                        <Selector
-                          label="İlçe"
-                          placeholder={
-                            selectedProvinceId
-                              ? 'İlçe seçiniz...'
-                              : 'Önce il seçin'
-                          }
-                          hasSearch
-                          hasClear
-                          searchPlaceholder="İlçe ara..."
-                          isDisabled={!selectedProvinceId}
-                          isLoading={isLoadingDistricts}
-                          value={selectedDistrictId || null}
-                          onChange={(val) => void handleDistrictChange(val)}
-                          options={districts.map((d) => ({
-                            value: String(d.id),
-                            label: d.name,
-                          }))}
-                          status={
-                            fieldErrors.district
-                              ? { type: 'error', message: fieldErrors.district }
-                              : undefined
-                          }
-                          isRequired
-                        />
-
-                        <Selector
-                          label="Mahalle"
-                          placeholder={
-                            selectedDistrictId
-                              ? 'Mahalle seçiniz...'
-                              : 'Önce ilçe seçin'
-                          }
-                          hasSearch
-                          hasClear
-                          searchPlaceholder="Mahalle ara..."
-                          isDisabled={!selectedDistrictId}
-                          isLoading={isLoadingNeighborhoods}
-                          value={selectedNeighborhood || null}
-                          onChange={(val) => {
-                            setSelectedNeighborhood(val ?? '');
-                            clearFieldError('neighborhood');
-                          }}
-                          options={neighborhoods.map((n) => ({
-                            value: n.name,
-                            label: n.name,
-                          }))}
-                          status={
-                            fieldErrors.neighborhood
-                              ? {
-                                  type: 'error',
-                                  message: fieldErrors.neighborhood,
-                                }
-                              : undefined
-                          }
-                          isRequired
-                        />
-                      </Grid>
+                      <TurkishLocationPicker
+                        city={selectedCity}
+                        district={selectedDistrict}
+                        neighborhood={selectedNeighborhood}
+                        onChange={(next) => {
+                          setSelectedCity(next.city);
+                          setSelectedDistrict(next.district);
+                          setSelectedNeighborhood(next.neighborhood);
+                          clearFieldError('city');
+                          clearFieldError('district');
+                          clearFieldError('neighborhood');
+                        }}
+                        errors={{
+                          city: fieldErrors.city,
+                          district: fieldErrors.district,
+                          neighborhood: fieldErrors.neighborhood,
+                        }}
+                      />
 
                       <TextInput
                         label="Açık Adres Detayı (Cadde / Sokak / Kapı No)"

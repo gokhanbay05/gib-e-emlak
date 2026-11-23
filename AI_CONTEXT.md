@@ -89,8 +89,8 @@ Tüm parçalar `backend/app/models.py` içindeki şu 8 PostgreSQL tablosunu teme
 - **`P0`**: Repo İskeleti, PostgreSQL Bağlantısı & Astryx UI Kurulumu (`chore(P0): ...`) — **[TAMAMLANDI]**
 - **`P1`**: PostgreSQL İlişkisel Veritabanı Şeması (8 Tablo) & Başlangıç Verileri (`feat(P1): ...`) — **[TAMAMLANDI]**
 - **`P2`**: Kullanıcı Kayıt / Giriş (Emlakçı & Müşteri) ve Yetki Belgesi Doğrulama (`feat(P2): ...`) — **[TAMAMLANDI]**
-- **`P3`**: İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi - GİB Madde 1 (`feat(P3): ...`) — **[SIRADAKİ]**
-- **`P4`**: Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay - GİB Madde 2 (`feat(P4): ...`)
+- **`P3`**: İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi - GİB Madde 1 (`feat(P3): ...`) — **[TAMAMLANDI]**
+- **`P4`**: Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay - GİB Madde 2 (`feat(P4): ...`) — **[SIRADAKİ]**
 - **`P5`**: Portföy Yönetimi, "Sahipsiz Ev Olmaz" Kuralı, Hızlı Müşteri Bağlama ve Kimlik Kontrolü - GİB Madde 3 (`feat(P5): ...`)
 - **`P6`**: Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Bilgi Fişi Çıktısı - GİB Madde 4 (`feat(P6): ...`)
 - **`P7`**: Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme (`feat(P7): ...`)
