@@ -18,6 +18,7 @@ from app.models import (
     Property,
     User,
 )
+from app.routers.auth import router as auth_router
 from app.seed import init_db_and_seed
 
 
@@ -49,6 +50,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth_router)
 
 
 @app.get("/api/health", tags=["Sistem & Sağlık"])

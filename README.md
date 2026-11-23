@@ -86,7 +86,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P2` — Kullanıcı Kayıt / Giriş (Emlakçı & Müşteri) ve Yetki Belgesi Doğrulama ⏳
+### `P2` — Kullanıcı Kayıt / Giriş (Emlakçı & Müşteri) ve Yetki Belgesi Doğrulama ✅
 - **Kapsam:**
   - **Ortak Kayıt Alanları:** Ad / Soyad, E-posta (**tek kayıt kuralı** — aynı e-posta ile ikinci kayıt engeli), Şifre oluşturma, Cep Telefonu.
   - **Emlakçıya Özel Kayıt Alanları:** **Taşınmaz Ticareti Yetki Belgesi No** (Ticaret Bakanlığı mock servisi üzerinden doğrulama kontrolü), Emlak Ofisi İsmi, Emlak Ofisi Logosu, Ofis Telefonu.

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@astryxdesign/core/AppShell';
+import { Avatar } from '@astryxdesign/core/Avatar';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -19,6 +20,11 @@ import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { Token } from '@astryxdesign/core/Token';
 import { VStack } from '@astryxdesign/core/VStack';
+import {
+  AuthModule,
+  type UserSession,
+  VISITOR_SESSION,
+} from './components/AuthModule';
 
 type RoadmapItem = {
   [key: string]: unknown;
@@ -79,6 +85,28 @@ interface OverviewResponse {
   sample_customers: SampleCustomerItem[];
   sample_properties: SamplePropertyItem[];
 }
+
+const DEFAULT_AGENT_SESSION: UserSession = {
+  id: 1,
+  full_name: 'Selim Karahan',
+  email: 'selim@baskentvizyon.com.tr',
+  phone: '0532 411 22 33',
+  role: 'AGENT',
+  agency: {
+    id: 1,
+    name: 'Başkent Vizyon Gayrimenkul A.Ş.',
+    authorized_person: 'Selim Karahan',
+    phone: '0312 468 10 20',
+    mobile_phone: '0532 411 22 33',
+    fax: '0312 468 10 21',
+    address:
+      'Kızılırmak Mah. Dumlupınar Blv. Next Level A Blok No:3/42 Çankaya / Ankara',
+    ttbs_document_no: '0600482',
+    is_ttbs_verified: true,
+    logo_url: 'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=200',
+  },
+  customer: null,
+};
 
 const DEFAULT_TABLES: DbTableSummary[] = [
   {
@@ -158,14 +186,14 @@ const ROADMAP_DATA: RoadmapItem[] = [
     code: 'P2',
     title: 'Kullanıcı Kayıt / Giriş (Emlakçı & Müşteri) ve Yetki Belgesi Kontrolü',
     scope: 'Ortak ve emlakçıya özel kayıt alanları, tekil e-posta, TTBS Yetki Belgesi doğrulama, ziyaretçi geçişi',
-    status: 'Sıradaki',
+    status: 'Tamamlandı',
     commit: 'feat(P2): emlakci ve musteri kayit giris ekranlari ile yetki belgesi dogrulama',
   },
   {
     code: 'P3',
     title: 'İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi (GİB Madde 1)',
     scope: 'İşletme adı, Yetkili, Adres, Sabit/Cep Tel, Fax, Vergi No, TTBS Belge No ve Ofis Logosu',
-    status: 'Planlandı',
+    status: 'Sıradaki',
     commit: 'feat(P3): isyeri tanimi ekrani ve emlak ofisi kurumsal bilgi yonetimi',
   },
   {
@@ -270,9 +298,9 @@ const BUSINESS_RULES: BusinessRuleItem[] = [
 ];
 
 const NAV_ITEMS = [
-  { id: 'overview', label: 'Mimari & Yol Haritası (P0-P11)', piece: 'P0' },
-  { id: 'database', label: 'PostgreSQL Şeması & Veriler', piece: 'P1' },
   { id: 'auth', label: 'Kayıt / Giriş & TTBS Kontrolü', piece: 'P2' },
+  { id: 'database', label: 'PostgreSQL Şeması & Veriler', piece: 'P1' },
+  { id: 'overview', label: 'Mimari & Yol Haritası (P0-P11)', piece: 'P0' },
   { id: 'agency', label: '1. İşyeri Tanımı (GİB-1)', piece: 'P3' },
   { id: 'customers', label: '2. Müşteri Yönetimi (GİB-2)', piece: 'P4' },
   { id: 'properties', label: '3. Portföy & Emlak (GİB-3)', piece: 'P5' },
@@ -283,7 +311,10 @@ const NAV_ITEMS = [
 ] as const;
 
 export default function App() {
-  const [selectedNav, setSelectedNav] = useState<string>('database');
+  const [selectedNav, setSelectedNav] = useState<string>('auth');
+  const [currentUser, setCurrentUser] = useState<UserSession>(
+    DEFAULT_AGENT_SESSION,
+  );
   const [overview, setOverview] = useState<OverviewResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -541,60 +572,109 @@ export default function App() {
           <Section padding={4}>
             <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
               <VStack gap={1}>
-                <HStack gap={1.5} vAlign="center">
-                  <Token label="PARÇA P1 TAMAMLANDI" color="green" />
-                  <Token label="8 İlişkisel PostgreSQL Tablosu" color="blue" />
-                  <Token label="React 19 + Astryx Neutral" color="teal" />
+                <HStack gap={1.5} vAlign="center" wrap="wrap">
+                  <Token label="PARÇA P2 AKTİF" color="green" />
+                  <Token
+                    label={
+                      currentUser.role === 'AGENT'
+                        ? `EMLAKÇI: ${currentUser.full_name}`
+                        : currentUser.role === 'CUSTOMER'
+                          ? `MÜŞTERİ: ${currentUser.full_name}`
+                          : 'ZİYARETÇİ (GİRİŞSİZ MOD)'
+                    }
+                    color={
+                      currentUser.role === 'AGENT'
+                        ? 'blue'
+                        : currentUser.role === 'CUSTOMER'
+                          ? 'teal'
+                          : 'orange'
+                    }
+                  />
+                  {currentUser.agency && (
+                    <Token
+                      label={`${currentUser.agency.name} · TTBS: ${currentUser.agency.ttbs_document_no}`}
+                      color="purple"
+                    />
+                  )}
                 </HStack>
                 <Heading level={1}>
                   GİB e-Emlak — Kurumsal Taşınmaz ve Emlak İşletmesi Platformu
                 </Heading>
                 <Text color="secondary">
-                  Önem ve karmaşıklık sırasına göre yapılandırılmış (P0–P11)
-                  modüler emlak işletmesi ve müşteri vitrin sistemi.
+                  Ticaret Bakanlığı Taşınmaz Ticareti Yetki Belgesi doğrulamalı
+                  emlak işletmesi ve müşteri yönetim sistemi.
                 </Text>
               </VStack>
 
-              <HStack gap={1.5}>
-                <Button
-                  label="PostgreSQL Verilerini Yenile"
-                  variant="primary"
-                  isLoading={isLoading}
-                  onClick={() => void fetchDatabaseOverview()}
+              <HStack gap={1.5} vAlign="center" wrap="wrap">
+                <Avatar
+                  name={currentUser.full_name}
+                  src={currentUser.agency?.logo_url ?? undefined}
+                  size="md"
                 />
+                {currentUser.role !== 'VISITOR' ? (
+                  <Button
+                    label="Çıkış Yap (Ziyaretçi Modu)"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setCurrentUser(VISITOR_SESSION)}
+                  />
+                ) : (
+                  <Button
+                    label="Emlakçı / Müşteri Girişi"
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setSelectedNav('auth')}
+                  />
+                )}
               </HStack>
             </HStack>
           </Section>
 
-          {overview?.connected ? (
-            <Banner
-              status="success"
-              title="PostgreSQL 16 Veritabanı Aktif — 8 Tablo ve Başlangıç Verileri Yüklendi"
-              description={`Canlı Bağlantı: ${overview.info}`}
-              collapsible={false}
+          {selectedNav === 'auth' ? (
+            <AuthModule
+              currentUser={currentUser}
+              onSelectSession={(session) => setCurrentUser(session)}
+              onDataChanged={() => void fetchDatabaseOverview()}
             />
-          ) : (
-            <Banner
-              status="info"
-              title="PostgreSQL Şeması (8 Tablo) ve Seed Verileri Hazır"
-              description="Canlı veritabanı sorgusu için Docker PostgreSQL ve FastAPI sunucusunu çalıştırın (docker compose up -d && uvicorn app.main:app --reload)."
-              collapsible={false}
-            />
-          )}
-
-          {selectedNav === 'database' ? (
+          ) : selectedNav === 'database' ? (
             <VStack gap={4}>
+              {overview?.connected ? (
+                <Banner
+                  status="success"
+                  title="PostgreSQL 16 Veritabanı Aktif — 8 Tablo ve Başlangıç Verileri Yüklendi"
+                  description={`Canlı Bağlantı: ${overview.info}`}
+                  collapsible={false}
+                />
+              ) : (
+                <Banner
+                  status="info"
+                  title="PostgreSQL Şeması (8 Tablo) ve Seed Verileri Hazır"
+                  description="Canlı veritabanı sorgusu için Docker PostgreSQL ve FastAPI sunucusunu çalıştırın."
+                  collapsible={false}
+                />
+              )}
+
               <Section padding={4}>
                 <VStack gap={3}>
-                  <VStack gap={0.5}>
-                    <Heading level={2}>
-                      P1 — PostgreSQL İlişkisel Veritabanı Şeması (8 Ana Tablo)
-                    </Heading>
-                    <Text color="secondary" size="sm">
-                      P2–P11 arasındaki tüm parçalar aşağıda tanımlanan ilişkisel
-                      PostgreSQL tabloları üzerinde çalışır.
-                    </Text>
-                  </VStack>
+                  <HStack justify="between" vAlign="center" wrap="wrap">
+                    <VStack gap={0.5}>
+                      <Heading level={2}>
+                        P1 — PostgreSQL İlişkisel Veritabanı Şeması (8 Ana Tablo)
+                      </Heading>
+                      <Text color="secondary" size="sm">
+                        P2–P11 arasındaki tüm parçalar aşağıda tanımlanan
+                        ilişkisel PostgreSQL tabloları üzerinde çalışır.
+                      </Text>
+                    </VStack>
+                    <Button
+                      label="Tabloları Yenile"
+                      variant="secondary"
+                      size="sm"
+                      isLoading={isLoading}
+                      onClick={() => void fetchDatabaseOverview()}
+                    />
+                  </HStack>
                   <Divider />
                   <Table
                     data={displayedTables}
@@ -754,17 +834,16 @@ export default function App() {
                 </HStack>
                 <Text color="secondary">
                   Bu ekran modülü planlanan geliştirme sırasına göre{' '}
-                  {activeNavObj.piece} parçasında aktif edilecektir. Veritabanı
-                  tabloları ve başlangıç verileri P1 kapsamında hazır durumdadır.
+                  {activeNavObj.piece} parçasında aktif edilecektir.
                 </Text>
                 <HStack gap={1.5}>
                   <Button
-                    label="PostgreSQL Şeması & Verileri Gör (P1)"
+                    label="Kayıt / Giriş & TTBS Ekranına Dön (P2)"
                     variant="primary"
-                    onClick={() => setSelectedNav('database')}
+                    onClick={() => setSelectedNav('auth')}
                   />
                   <Button
-                    label="P0-P11 Yol Haritasına Dön"
+                    label="P0-P11 Yol Haritasını Gör"
                     variant="secondary"
                     onClick={() => setSelectedNav('overview')}
                   />
