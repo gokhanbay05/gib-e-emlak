@@ -1,38 +1,20 @@
 import re
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.database import get_db
+from app.core.database import get_db
+from app.core.validators import normalize_and_validate_phone
 from app.models import Agency, Appointment, Customer, Property
-from app.routers.auth import normalize_and_validate_phone
+from app.schemas.agency import AgencyUpdateRequest
 
-router = APIRouter(prefix="/api/agencies", tags=["P3 - İşyeri (Emlak Ofisi) Tanımı (GİB Madde 1)"])
-
-
-class AgencyUpdateRequest(BaseModel):
-    name: str = Field(..., description="İşletme Adı (Emlak Ofisi İsmi)")
-    authorized_person: str = Field(..., description="Yetkili Kişi Adı Soyadı")
-    city: str = Field(..., description="İl")
-    district: str = Field(..., description="İlçe")
-    neighborhood: str = Field(..., description="Mahalle")
-    address: str = Field(..., description="Açık Adres Detayı")
-    phone: str = Field(..., description="Ofis Sabit Telefonu")
-    mobile_phone: str | None = Field(default=None, description="Yetkili Cep Telefonu")
-    fax: str | None = Field(default=None, description="Fax Numarası")
-    tax_office: str | None = Field(default=None, description="Vergi Dairesi")
-    tax_number: str | None = Field(default=None, description="Vergi Kimlik Numarası (10 Hane)")
-    logo_url: str | None = Field(default=None, description="Emlak Ofisi Logo URL")
-    description: str | None = Field(default=None, description="Kurumsal Tanıtım Açıklaması")
+router = APIRouter(prefix="/api/agencies", tags=["İşyeri (Emlak Ofisi) Tanımı"])
 
 
 def serialize_agency(agency: Agency, db: Session) -> dict:
     property_count = (
         db.scalar(
-            select(func.count())
-            .select_from(Property)
-            .where(Property.agency_id == agency.id)
+            select(func.count()).select_from(Property).where(Property.agency_id == agency.id)
         )
         or 0
     )
@@ -46,9 +28,7 @@ def serialize_agency(agency: Agency, db: Session) -> dict:
     )
     customer_count = (
         db.scalar(
-            select(func.count())
-            .select_from(Customer)
-            .where(Customer.agency_id == agency.id)
+            select(func.count()).select_from(Customer).where(Customer.agency_id == agency.id)
         )
         or 0
     )
@@ -89,16 +69,12 @@ def serialize_agency(agency: Agency, db: Session) -> dict:
 
 @router.get("")
 def list_agencies(db: Session = Depends(get_db)) -> dict:
-    """Platformda kayıtlı tüm yetki belgeli emlak işletmelerini listeler."""
     agencies = db.scalars(select(Agency).order_by(Agency.id)).all()
-    return {
-        "agencies": [serialize_agency(a, db) for a in agencies],
-    }
+    return {"agencies": [serialize_agency(a, db) for a in agencies]}
 
 
 @router.get("/{agency_id}")
 def get_agency_detail(agency_id: int, db: Session = Depends(get_db)) -> dict:
-    """Seçilen emlak işletmesinin kurumsal işyeri tanımı bilgilerini döndürür."""
     agency = db.get(Agency, agency_id)
     if agency is None:
         raise HTTPException(
@@ -110,13 +86,8 @@ def get_agency_detail(agency_id: int, db: Session = Depends(get_db)) -> dict:
 
 @router.put("/{agency_id}")
 def update_agency_profile(
-    agency_id: int,
-    payload: AgencyUpdateRequest,
-    db: Session = Depends(get_db),
+    agency_id: int, payload: AgencyUpdateRequest, db: Session = Depends(get_db)
 ) -> dict:
-    """
-    P3 (GİB Madde 1): Emlak işletmesinin kurumsal işyeri bilgilerini doğrular ve günceller.
-    """
     agency = db.get(Agency, agency_id)
     if agency is None:
         raise HTTPException(
@@ -125,12 +96,10 @@ def update_agency_profile(
         )
 
     field_errors: dict[str, str] = {}
-
     if len(payload.name.strip()) < 3:
         field_errors["name"] = "İşletme adı en az 3 karakter olmalıdır."
     if len(payload.authorized_person.strip()) < 3:
-        field_errors["authorized_person"] = "Yetkili kişi adı soyadı en az 3 karakter olmalıdır."
-
+        field_errors["authorized_person"] = "Yetkili kişi en az 3 karakter olmalıdır."
     if not payload.city.strip():
         field_errors["city"] = "Lütfen il seçiniz."
     if not payload.district.strip():
@@ -166,9 +135,7 @@ def update_agency_profile(
     if payload.tax_number and payload.tax_number.strip():
         cleaned_tax_no = re.sub(r"\D", "", payload.tax_number)
         if len(cleaned_tax_no) not in {10, 11}:
-            field_errors["tax_number"] = (
-                "Vergi Numarası 10 haneli (şahıs işletmesi için 11 haneli TCKN) olmalıdır."
-            )
+            field_errors["tax_number"] = "Vergi No 10 veya 11 haneli olmalıdır."
 
     if field_errors:
         raise HTTPException(
@@ -196,8 +163,7 @@ def update_agency_profile(
 
     db.commit()
     db.refresh(agency)
-
     return {
-        "message": "İşyeri (Emlak Ofisi) bilgileri başarıyla güncellendi.",
+        "message": "İşyeri bilgileri başarıyla güncellendi.",
         "agency": serialize_agency(agency, db),
     }

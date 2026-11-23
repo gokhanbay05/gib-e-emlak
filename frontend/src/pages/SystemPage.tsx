@@ -2,11 +2,10 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Section } from '@astryxdesign/core/Section';
 import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { VStack } from '@astryxdesign/core/VStack';
-import { PageHeader } from '../components/common/PageHeader';
+import { PageFrame } from '../components/layout/PageFrame';
 import type { DbTableSummary, SystemOverview } from '../types';
 
 interface SystemPageProps {
@@ -40,12 +39,10 @@ export function SystemPage({ overview }: SystemPageProps) {
   ];
 
   return (
-    <VStack gap={4}>
-      <PageHeader
-        title="Sistem ve Veritabanı Özeti"
-        subtitle="PostgreSQL 16 ilişkisel tablo kayıt sayıları ve sunucu durumu."
-      />
-
+    <PageFrame
+      title="Sistem ve Veritabanı Özeti"
+      subtitle="PostgreSQL 16 ilişkisel tablo kayıt sayıları ve sunucu durumu."
+    >
       <Banner
         status={overview?.connected ? 'success' : 'info'}
         title={
@@ -57,20 +54,18 @@ export function SystemPage({ overview }: SystemPageProps) {
         collapsible={false}
       />
 
-      <Section padding={3}>
-        <VStack gap={2}>
-          <Heading level={3}>Veritabanı Tabloları</Heading>
-          <Divider />
-          <HStack isScrollable width="100%">
-            <Table
-              data={overview?.tables ?? []}
-              columns={columns}
-              idKey="table_name"
-              hasHover
-            />
-          </HStack>
-        </VStack>
-      </Section>
-    </VStack>
+      <VStack gap={3}>
+        <Heading level={3}>Veritabanı Tabloları</Heading>
+        <Divider />
+        <HStack isScrollable width="100%">
+          <Table
+            data={overview?.tables ?? []}
+            columns={columns}
+            idKey="table_name"
+            hasHover
+          />
+        </HStack>
+      </VStack>
+    </PageFrame>
   );
 }

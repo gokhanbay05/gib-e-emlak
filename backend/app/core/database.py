@@ -1,8 +1,9 @@
 from collections.abc import Generator
+from datetime import datetime, timezone
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.config import settings
+from app.core.config import settings
 
 engine = create_engine(
     settings.database_url,
@@ -20,6 +21,11 @@ SessionLocal = sessionmaker(
 
 class Base(DeclarativeBase):
     """Tüm SQLAlchemy PostgreSQL modellerinin ortak taban sınıfı."""
+
+
+def utc_now() -> datetime:
+    """Tüm tablo zaman damgaları için ortak UTC saat üretici."""
+    return datetime.now(timezone.utc)
 
 
 def get_db() -> Generator[Session, None, None]:

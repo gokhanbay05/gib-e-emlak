@@ -1,0 +1,18 @@
+"""Tüm PostgreSQL ilişkisel modellerini dışa aktarır."""
+
+from app.models.agency import Agency
+from app.models.appointment import Appointment, BlockedSlot
+from app.models.customer import Customer, CustomerSearchRequest
+from app.models.property import Property
+from app.models.user import Favorite, User
+
+__all__ = [
+    "Agency",
+    "Appointment",
+    "BlockedSlot",
+    "Customer",
+    "CustomerSearchRequest",
+    "Favorite",
+    "Property",
+    "User",
+]

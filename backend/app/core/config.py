@@ -2,6 +2,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    """Uygulama ortam değişkenleri ve temel yapılandırma ayarları."""
+
     app_title: str = "GİB e-Emlak Kurumsal Taşınmaz Platformu API"
     app_version: str = "0.4.0-P3"
     app_env: str = "development"

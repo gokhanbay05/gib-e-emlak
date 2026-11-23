@@ -3,7 +3,6 @@ import { AppShell } from '@astryxdesign/core/AppShell';
 import { Avatar } from '@astryxdesign/core/Avatar';
 import { Button } from '@astryxdesign/core/Button';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Layout } from '@astryxdesign/core/Layout';
 import { MobileNav, MobileNavToggle } from '@astryxdesign/core/MobileNav';
 import { SideNav, SideNavHeading } from '@astryxdesign/core/SideNav';
 import { Text } from '@astryxdesign/core/Text';
@@ -21,8 +20,7 @@ interface AppLayoutProps {
 
 /**
  * Kurumsal, sade ve tam mobil uyumlu ana uygulama çerçevesi.
- * - Masaüstünde SideNav, mobilde MobileNav çekmecesi ile çalışır.
- * - Üst çubukta (TopNav) gereksiz rozet/badge yığılması yapılmaz.
+ * contentPadding={0} ile iç boşluk sahipliği tek noktadan `PageFrame` bileşenine verilir.
  */
 export function AppLayout({
   selectedNav,
@@ -38,9 +36,20 @@ export function AppLayout({
     setIsMobileNavOpen(false);
   };
 
+  const navHeadingTitle =
+    currentUser.agency?.name ??
+    (currentUser.role === 'CUSTOMER' ? currentUser.full_name : 'Ziyaretçi Modu');
+
+  const navHeadingSubtitle =
+    currentUser.role === 'AGENT'
+      ? 'Emlak İşletmesi Paneli'
+      : currentUser.role === 'CUSTOMER'
+        ? 'Bireysel Üyelik'
+        : 'Girişsiz Gezinme';
+
   return (
     <AppShell
-      contentPadding={3}
+      contentPadding={0}
       variant="surface"
       topNav={
         <TopNav
@@ -80,12 +89,8 @@ export function AppLayout({
           collapsible
           header={
             <SideNavHeading
-              heading="GİB e-Emlak"
-              subheading={
-                currentUser.agency
-                  ? currentUser.agency.name
-                  : 'Taşınmaz Yönetim Platformu'
-              }
+              heading={navHeadingTitle}
+              subheading={navHeadingSubtitle}
             />
           }
         >
@@ -99,12 +104,8 @@ export function AppLayout({
           label="Ana menü"
           header={
             <SideNavHeading
-              heading="GİB e-Emlak"
-              subheading={
-                currentUser.agency
-                  ? currentUser.agency.name
-                  : 'Taşınmaz Yönetim Platformu'
-              }
+              heading={navHeadingTitle}
+              subheading={navHeadingSubtitle}
             />
           }
         >
@@ -112,9 +113,7 @@ export function AppLayout({
         </MobileNav>
       }
     >
-      <Layout contentWidth={1040} padding={1}>
-        {children}
-      </Layout>
+      {children}
     </AppShell>
   );
 }

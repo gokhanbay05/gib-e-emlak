@@ -6,7 +6,6 @@ import { Divider } from '@astryxdesign/core/Divider';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Section } from '@astryxdesign/core/Section';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
 import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
@@ -22,7 +21,7 @@ import {
 import { ApiError } from '../api/client';
 import { LocationPicker } from '../components/common/LocationPicker';
 import { LogoUploader } from '../components/common/LogoUploader';
-import { PageHeader } from '../components/common/PageHeader';
+import { PageFrame } from '../components/layout/PageFrame';
 import {
   type TTBSVerifyResult,
   type UserSession,
@@ -283,36 +282,33 @@ export function AuthPage({
   ];
 
   return (
-    <VStack gap={4}>
-      <PageHeader
-        title="Hesap ve Oturum Yönetimi"
-        subtitle="Emlakçı veya bireysel müşteri olarak kayıt olabilir, mevcut hesapla giriş yapabilirsiniz."
-        action={
-          <Button
-            label="Ziyaretçi Olarak Devam Et"
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              onSelectSession(VISITOR_SESSION);
-              showToast({ body: 'Ziyaretçi moduna geçildi.', type: 'info' });
-            }}
-          />
-        }
-      />
-
-      <Section padding={3}>
-        <VStack gap={4}>
-          <TabList
-            value={activeTab}
-            onChange={(val) => {
-              setActiveTab(val);
-              setFieldErrors({});
-            }}
-            hasDivider
-          >
-            <Tab value="register" label="Yeni Kayıt Ol" />
-            <Tab value="login" label="Giriş Yap" />
-          </TabList>
+    <PageFrame
+      title="Hesap ve Oturum Yönetimi"
+      subtitle="Emlakçı veya bireysel müşteri olarak kayıt olabilir, mevcut hesapla giriş yapabilirsiniz."
+      action={
+        <Button
+          label="Ziyaretçi Olarak Devam Et"
+          variant="secondary"
+          size="sm"
+          onClick={() => {
+            onSelectSession(VISITOR_SESSION);
+            showToast({ body: 'Ziyaretçi moduna geçildi.', type: 'info' });
+          }}
+        />
+      }
+    >
+      <VStack gap={4}>
+        <TabList
+          value={activeTab}
+          onChange={(val) => {
+            setActiveTab(val);
+            setFieldErrors({});
+          }}
+          hasDivider
+        >
+          <Tab value="register" label="Yeni Kayıt Ol" />
+          <Tab value="login" label="Giriş Yap" />
+        </TabList>
 
           {activeTab === 'register' ? (
             <VStack gap={4}>
@@ -666,23 +662,20 @@ export function AuthPage({
               </Card>
             </Grid>
           )}
-        </VStack>
-      </Section>
+      </VStack>
 
-      <Section padding={3}>
-        <VStack gap={2}>
-          <Heading level={3}>Kayıtlı Hesaplar</Heading>
-          <Divider />
-          <HStack isScrollable width="100%">
-            <Table
-              data={registeredUsers}
-              columns={userColumns}
-              idKey="id"
-              hasHover
-            />
-          </HStack>
-        </VStack>
-      </Section>
-    </VStack>
+      <VStack gap={3}>
+        <Heading level={3}>Kayıtlı Hesaplar</Heading>
+        <Divider />
+        <HStack isScrollable width="100%">
+          <Table
+            data={registeredUsers}
+            columns={userColumns}
+            idKey="id"
+            hasHover
+          />
+        </HStack>
+      </VStack>
+    </PageFrame>
   );
 }

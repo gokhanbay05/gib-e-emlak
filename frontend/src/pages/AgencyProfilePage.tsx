@@ -7,7 +7,6 @@ import { Divider } from '@astryxdesign/core/Divider';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Section } from '@astryxdesign/core/Section';
 import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextArea } from '@astryxdesign/core/TextArea';
@@ -18,7 +17,7 @@ import { fetchAgencies, fetchAgencyById, updateAgencyById } from '../api/agencie
 import { ApiError } from '../api/client';
 import { LocationPicker } from '../components/common/LocationPicker';
 import { LogoUploader } from '../components/common/LogoUploader';
-import { PageHeader } from '../components/common/PageHeader';
+import { PageFrame } from '../components/layout/PageFrame';
 import type { AgencyRecord, SessionAgency, UserSession } from '../types';
 import {
   formatDigitsOnly,
@@ -219,51 +218,46 @@ export function AgencyProfilePage({
 
   if (currentUser.role !== 'AGENT' || !currentUser.agency) {
     return (
-      <VStack gap={4}>
-        <PageHeader
-          title="İşyeri Tanımı"
-          subtitle="Kayıtlı emlak işletmelerini görüntüleyebilirsiniz."
-          action={
-            <Button
-              label="Emlakçı Girişi Yap"
-              variant="primary"
-              size="sm"
-              onClick={onNavigateAuth}
-            />
-          }
-        />
+      <PageFrame
+        title="İşyeri Tanımı"
+        subtitle="Kayıtlı emlak işletmelerini görüntüleyebilirsiniz."
+        action={
+          <Button
+            label="Emlakçı Girişi Yap"
+            variant="primary"
+            size="sm"
+            onClick={onNavigateAuth}
+          />
+        }
+      >
         <Banner
           status="info"
           title="İşyeri bilgilerini düzenlemek için emlakçı hesabı gereklidir"
           description="Hesap ekranından emlakçı oturumuna geçebilirsiniz."
           collapsible={false}
         />
-        <Section padding={3}>
-          <HStack isScrollable width="100%">
-            <Table data={allAgencies} columns={agencyColumns} idKey="id" hasHover />
-          </HStack>
-        </Section>
-      </VStack>
+        <HStack isScrollable width="100%">
+          <Table data={allAgencies} columns={agencyColumns} idKey="id" hasHover />
+        </HStack>
+      </PageFrame>
     );
   }
 
   return (
-    <VStack gap={4}>
-      <PageHeader
-        title="İşyeri Tanımı"
-        subtitle="Emlak işletmenizin resmi bilgilerini ve yazıcı çıktısı antetini yönetin."
-        action={
-          <Button
-            label="Değişiklikleri Kaydet"
-            variant="primary"
-            isLoading={isSaving}
-            onClick={() => void handleSave()}
-          />
-        }
-      />
-
+    <PageFrame
+      title="İşyeri Tanımı"
+      subtitle="Emlak işletmenizin resmi bilgilerini ve yazıcı çıktısı antetini yönetin."
+      action={
+        <Button
+          label="Değişiklikleri Kaydet"
+          variant="primary"
+          isLoading={isSaving}
+          onClick={() => void handleSave()}
+        />
+      }
+    >
       {agency && (
-        <Grid columns={{ minWidth: 160, max: 3 }} gap={2}>
+        <Grid columns={{ minWidth: 180, max: 3 }} gap={3}>
           <Card padding={3}>
             <VStack gap={0.5}>
               <Text color="secondary" size="sm">
@@ -291,236 +285,229 @@ export function AgencyProfilePage({
         </Grid>
       )}
 
-      <Grid columns={{ minWidth: 260, max: 2 }} gap={4}>
-        <Section padding={3}>
+      <Grid columns={{ minWidth: 280, max: 2 }} gap={5}>
+        <VStack gap={3}>
+          <Heading level={3}>İşletme Bilgileri</Heading>
+          <Divider />
+
+          <TextInput
+            label="İşletme Adı *"
+            value={name}
+            onChange={(val) => {
+              setName(val);
+              clearError('name');
+            }}
+            status={
+              fieldErrors.name
+                ? { type: 'error', message: fieldErrors.name }
+                : undefined
+            }
+            width="100%"
+          />
+
+          <TextInput
+            label="Yetkili Kişi *"
+            value={authorizedPerson}
+            onChange={(val) => {
+              setAuthorizedPerson(sanitizeNameInput(val));
+              clearError('authorized_person');
+            }}
+            status={
+              fieldErrors.authorized_person
+                ? { type: 'error', message: fieldErrors.authorized_person }
+                : undefined
+            }
+            width="100%"
+          />
+
+          <Grid columns={{ minWidth: 160, max: 2 }} gap={2}>
+            <TextInput
+              type="tel"
+              inputMode="tel"
+              label="Ofis Telefonu *"
+              placeholder="0 (312) 468 10 20"
+              value={phone}
+              onChange={(val) => {
+                setPhone(formatTurkishPhone(val));
+                clearError('phone');
+              }}
+              status={
+                fieldErrors.phone
+                  ? { type: 'error', message: fieldErrors.phone }
+                  : undefined
+              }
+              width="100%"
+            />
+            <TextInput
+              type="tel"
+              inputMode="tel"
+              label="Cep Telefonu"
+              placeholder="0 (532) 411 22 33"
+              value={mobilePhone}
+              onChange={(val) => {
+                setMobilePhone(formatTurkishPhone(val));
+                clearError('mobile_phone');
+              }}
+              status={
+                fieldErrors.mobile_phone
+                  ? { type: 'error', message: fieldErrors.mobile_phone }
+                  : undefined
+              }
+              width="100%"
+            />
+          </Grid>
+
+          <Grid columns={{ minWidth: 160, max: 2 }} gap={2}>
+            <TextInput
+              type="tel"
+              inputMode="tel"
+              label="Fax"
+              placeholder="0 (312) 468 10 21"
+              value={fax}
+              onChange={(val) => {
+                setFax(formatTurkishPhone(val));
+                clearError('fax');
+              }}
+              status={
+                fieldErrors.fax
+                  ? { type: 'error', message: fieldErrors.fax }
+                  : undefined
+              }
+              width="100%"
+            />
+            <TextInput
+              inputMode="numeric"
+              label="Vergi No"
+              placeholder="10 haneli VKN"
+              value={taxNumber}
+              onChange={(val) => {
+                setTaxNumber(formatDigitsOnly(val, 11));
+                clearError('tax_number');
+              }}
+              status={
+                fieldErrors.tax_number
+                  ? { type: 'error', message: fieldErrors.tax_number }
+                  : undefined
+              }
+              width="100%"
+            />
+          </Grid>
+
+          <TextInput
+            label="Vergi Dairesi"
+            placeholder="Örn: Çankaya Vergi Dairesi"
+            value={taxOffice}
+            onChange={(val) => setTaxOffice(val)}
+            width="100%"
+          />
+
+          <LocationPicker
+            city={city}
+            district={district}
+            neighborhood={neighborhood}
+            onChange={(next) => {
+              setCity(next.city);
+              setDistrict(next.district);
+              setNeighborhood(next.neighborhood);
+              clearError('city');
+              clearError('district');
+              clearError('neighborhood');
+            }}
+            errors={{
+              city: fieldErrors.city,
+              district: fieldErrors.district,
+              neighborhood: fieldErrors.neighborhood,
+            }}
+          />
+
+          <TextInput
+            label="Açık Adres *"
+            value={address}
+            onChange={(val) => {
+              setAddress(val);
+              clearError('address');
+            }}
+            status={
+              fieldErrors.address
+                ? { type: 'error', message: fieldErrors.address }
+                : undefined
+            }
+            width="100%"
+          />
+
+          <TextArea
+            label="İşletme Açıklaması"
+            placeholder="Hizmet verilen bölgeler ve uzmanlık alanları..."
+            value={description}
+            onChange={(val) => setDescription(val)}
+          />
+
+          <Text color="secondary" size="sm">
+            * işaretli alanlar zorunludur.
+          </Text>
+        </VStack>
+
+        <VStack gap={5}>
           <VStack gap={3}>
-            <Heading level={3}>İşletme Bilgileri</Heading>
+            <Heading level={3}>Ofis Logosu</Heading>
             <Divider />
-
-            <TextInput
-              label="İşletme Adı *"
-              value={name}
-              onChange={(val) => {
-                setName(val);
-                clearError('name');
-              }}
-              status={
-                fieldErrors.name
-                  ? { type: 'error', message: fieldErrors.name }
-                  : undefined
-              }
-              width="100%"
+            <LogoUploader
+              label="Logoyu Güncelle"
+              currentLogoUrl={logoUrl || null}
+              onUploaded={(url) => setLogoUrl(url ?? '')}
             />
-
-            <TextInput
-              label="Yetkili Kişi *"
-              value={authorizedPerson}
-              onChange={(val) => {
-                setAuthorizedPerson(sanitizeNameInput(val));
-                clearError('authorized_person');
-              }}
-              status={
-                fieldErrors.authorized_person
-                  ? { type: 'error', message: fieldErrors.authorized_person }
-                  : undefined
-              }
-              width="100%"
-            />
-
-            <Grid columns={{ minWidth: 180, max: 2 }} gap={2}>
-              <TextInput
-                label="Vergi Dairesi"
-                placeholder="Örn: Çankaya Vergi Dairesi"
-                value={taxOffice}
-                onChange={(val) => setTaxOffice(val)}
-                width="100%"
-              />
-              <TextInput
-                inputMode="numeric"
-                label="Vergi No"
-                placeholder="10 haneli VKN"
-                value={taxNumber}
-                onChange={(val) => {
-                  setTaxNumber(formatDigitsOnly(val, 11));
-                  clearError('tax_number');
-                }}
-                status={
-                  fieldErrors.tax_number
-                    ? { type: 'error', message: fieldErrors.tax_number }
-                    : undefined
-                }
-                width="100%"
-              />
-            </Grid>
-
-            <Grid columns={{ minWidth: 160, max: 3 }} gap={2}>
-              <TextInput
-                type="tel"
-                inputMode="tel"
-                label="Ofis Telefonu *"
-                placeholder="0 (312) 468 10 20"
-                value={phone}
-                onChange={(val) => {
-                  setPhone(formatTurkishPhone(val));
-                  clearError('phone');
-                }}
-                status={
-                  fieldErrors.phone
-                    ? { type: 'error', message: fieldErrors.phone }
-                    : undefined
-                }
-                width="100%"
-              />
-              <TextInput
-                type="tel"
-                inputMode="tel"
-                label="Cep Telefonu"
-                placeholder="0 (532) 411 22 33"
-                value={mobilePhone}
-                onChange={(val) => {
-                  setMobilePhone(formatTurkishPhone(val));
-                  clearError('mobile_phone');
-                }}
-                status={
-                  fieldErrors.mobile_phone
-                    ? { type: 'error', message: fieldErrors.mobile_phone }
-                    : undefined
-                }
-                width="100%"
-              />
-              <TextInput
-                type="tel"
-                inputMode="tel"
-                label="Fax"
-                placeholder="0 (312) 468 10 21"
-                value={fax}
-                onChange={(val) => {
-                  setFax(formatTurkishPhone(val));
-                  clearError('fax');
-                }}
-                status={
-                  fieldErrors.fax
-                    ? { type: 'error', message: fieldErrors.fax }
-                    : undefined
-                }
-                width="100%"
-              />
-            </Grid>
-
-            <LocationPicker
-              city={city}
-              district={district}
-              neighborhood={neighborhood}
-              onChange={(next) => {
-                setCity(next.city);
-                setDistrict(next.district);
-                setNeighborhood(next.neighborhood);
-                clearError('city');
-                clearError('district');
-                clearError('neighborhood');
-              }}
-              errors={{
-                city: fieldErrors.city,
-                district: fieldErrors.district,
-                neighborhood: fieldErrors.neighborhood,
-              }}
-            />
-
-            <TextInput
-              label="Açık Adres *"
-              value={address}
-              onChange={(val) => {
-                setAddress(val);
-                clearError('address');
-              }}
-              status={
-                fieldErrors.address
-                  ? { type: 'error', message: fieldErrors.address }
-                  : undefined
-              }
-              width="100%"
-            />
-
-            <TextArea
-              label="İşletme Açıklaması"
-              placeholder="Hizmet verilen bölgeler ve uzmanlık alanları..."
-              value={description}
-              onChange={(val) => setDescription(val)}
-            />
-
-            <Text color="secondary" size="sm">
-              * işaretli alanlar zorunludur.
-            </Text>
           </VStack>
-        </Section>
 
-        <VStack gap={4}>
-          <Section padding={3}>
-            <VStack gap={3}>
-              <Heading level={3}>Ofis Logosu</Heading>
-              <Divider />
-              <LogoUploader
-                label="Logoyu Güncelle"
-                currentLogoUrl={logoUrl || null}
-                onUploaded={(url) => setLogoUrl(url ?? '')}
-              />
-            </VStack>
-          </Section>
-
-          <Section padding={3}>
-            <VStack gap={3}>
-              <Heading level={3}>Yazıcı Çıktısı Antet Önizlemesi</Heading>
-              <Divider />
-              <Card padding={3} variant="muted">
-                <VStack gap={2}>
-                  <HStack gap={2} vAlign="center" wrap="wrap">
-                    <Avatar
-                      name={name || 'Emlak Ofisi'}
-                      src={logoUrl || undefined}
-                      size="lg"
-                      shape="rounded"
-                    />
-                    <VStack gap={0.5}>
-                      <Heading level={4}>{name || 'İşletme Adı'}</Heading>
-                      <Text color="secondary" size="sm">
-                        {`Yetkili: ${authorizedPerson || '-'}`}
-                      </Text>
-                    </VStack>
-                  </HStack>
-                  <Divider />
-                  <Text size="sm">
-                    {`${neighborhood ? `${neighborhood}, ` : ''}${address || '-'}${district || city ? ` (${district} / ${city})` : ''}`}
-                  </Text>
-                  <HStack gap={2} wrap="wrap">
-                    <Text size="sm">{`Tel: ${phone || '-'}`}</Text>
-                    {mobilePhone && <Text size="sm">{`Cep: ${mobilePhone}`}</Text>}
-                    {fax && <Text size="sm">{`Fax: ${fax}`}</Text>}
-                  </HStack>
-                  <Text color="secondary" size="sm">
-                    {[
-                      taxOffice ? `Vergi Dairesi: ${taxOffice}` : '',
-                      taxNumber ? `Vergi No: ${taxNumber}` : '',
-                      agency ? `Yetki Belge No: ${agency.ttbs_document_no}` : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
-                </VStack>
-              </Card>
-            </VStack>
-          </Section>
+          <VStack gap={3}>
+            <Heading level={3}>Yazıcı Çıktısı Antet Önizlemesi</Heading>
+            <Divider />
+            <Card padding={4} variant="muted">
+              <VStack gap={2}>
+                <HStack gap={2} vAlign="center" wrap="wrap">
+                  <Avatar
+                    name={name || 'Emlak Ofisi'}
+                    src={logoUrl || undefined}
+                    size="lg"
+                    shape="rounded"
+                  />
+                  <VStack gap={0.5}>
+                    <Heading level={4}>{name || 'İşletme Adı'}</Heading>
+                    <Text color="secondary" size="sm">
+                      {`Yetkili: ${authorizedPerson || '-'}`}
+                    </Text>
+                  </VStack>
+                </HStack>
+                <Divider />
+                <Text size="sm">
+                  {`${neighborhood ? `${neighborhood}, ` : ''}${address || '-'}${district || city ? ` (${district} / ${city})` : ''}`}
+                </Text>
+                <HStack gap={2} wrap="wrap">
+                  <Text size="sm">{`Tel: ${phone || '-'}`}</Text>
+                  {mobilePhone && <Text size="sm">{`Cep: ${mobilePhone}`}</Text>}
+                  {fax && <Text size="sm">{`Fax: ${fax}`}</Text>}
+                </HStack>
+                <Text color="secondary" size="sm">
+                  {[
+                    taxOffice ? `Vergi Dairesi: ${taxOffice}` : '',
+                    taxNumber ? `Vergi No: ${taxNumber}` : '',
+                    agency ? `Yetki Belge No: ${agency.ttbs_document_no}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </VStack>
+            </Card>
+          </VStack>
         </VStack>
       </Grid>
 
-      <Section padding={3}>
-        <VStack gap={2}>
-          <Heading level={3}>Kayıtlı Emlak İşletmeleri</Heading>
-          <Divider />
-          <HStack isScrollable width="100%">
-            <Table data={allAgencies} columns={agencyColumns} idKey="id" hasHover />
-          </HStack>
-        </VStack>
-      </Section>
-    </VStack>
+      <VStack gap={3}>
+        <Heading level={3}>Kayıtlı Emlak İşletmeleri</Heading>
+        <Divider />
+        <HStack isScrollable width="100%">
+          <Table data={allAgencies} columns={agencyColumns} idKey="id" hasHover />
+        </HStack>
+      </VStack>
+    </PageFrame>
   );
 }

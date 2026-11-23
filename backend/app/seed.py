@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
-from app.database import Base, SessionLocal, engine
+from app.core.database import Base, SessionLocal, engine
 from app.models import (
     Agency,
     Appointment,

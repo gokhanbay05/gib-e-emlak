@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Selector } from '@astryxdesign/core/Selector';
 import { Text } from '@astryxdesign/core/Text';
+import { VStack } from '@astryxdesign/core/VStack';
 import { fetchDistricts, fetchNeighborhoods, fetchProvinces } from '../../api/locations';
 import type { LocationOption } from '../../types';
 import { normalizeTurkish } from '../../utils/formatters';
@@ -131,54 +132,56 @@ export function LocationPicker({
   );
 
   return (
-    <Grid columns={{ minWidth: 160, max: 3 }} gap={2}>
-      <Selector
-        label={`İl${star}`}
-        placeholder="İl seçiniz"
-        hasSearch
-        hasClear
-        searchPlaceholder="İl ara (Örn: İstanbul, İzmir)"
-        emptySearchText="Eşleşen il bulunamadı"
-        value={city || null}
-        options={provinceOptions}
-        renderOption={(opt) => <Text>{opt.value}</Text>}
-        renderValue={(opt) => <Text>{opt.value}</Text>}
-        onChange={(val) =>
-          onChange({
-            city: val ?? '',
-            district: '',
-            neighborhood: '',
-          })
-        }
-        status={errors?.city ? { type: 'error', message: errors.city } : undefined}
-        width="100%"
-      />
+    <VStack gap={2}>
+      <Grid columns={{ minWidth: 160, max: 2 }} gap={2}>
+        <Selector
+          label={`İl${star}`}
+          placeholder="İl seçiniz"
+          hasSearch
+          hasClear
+          searchPlaceholder="İl ara (Örn: İstanbul, İzmir)"
+          emptySearchText="Eşleşen il bulunamadı"
+          value={city || null}
+          options={provinceOptions}
+          renderOption={(opt) => <Text>{opt.value}</Text>}
+          renderValue={(opt) => <Text>{opt.value}</Text>}
+          onChange={(val) =>
+            onChange({
+              city: val ?? '',
+              district: '',
+              neighborhood: '',
+            })
+          }
+          status={errors?.city ? { type: 'error', message: errors.city } : undefined}
+          width="100%"
+        />
 
-      <Selector
-        label={`İlçe${star}`}
-        placeholder={city ? 'İlçe seçiniz' : 'Önce il seçin'}
-        hasSearch
-        hasClear
-        searchPlaceholder="İlçe ara..."
-        emptySearchText="Eşleşen ilçe bulunamadı"
-        isDisabled={!city}
-        isLoading={isLoadingDistricts}
-        value={district || null}
-        options={districtOptions}
-        renderOption={(opt) => <Text>{opt.value}</Text>}
-        renderValue={(opt) => <Text>{opt.value}</Text>}
-        onChange={(val) =>
-          onChange({
-            city,
-            district: val ?? '',
-            neighborhood: '',
-          })
-        }
-        status={
-          errors?.district ? { type: 'error', message: errors.district } : undefined
-        }
-        width="100%"
-      />
+        <Selector
+          label={`İlçe${star}`}
+          placeholder={city ? 'İlçe seçiniz' : 'Önce il seçin'}
+          hasSearch
+          hasClear
+          searchPlaceholder="İlçe ara..."
+          emptySearchText="Eşleşen ilçe bulunamadı"
+          isDisabled={!city}
+          isLoading={isLoadingDistricts}
+          value={district || null}
+          options={districtOptions}
+          renderOption={(opt) => <Text>{opt.value}</Text>}
+          renderValue={(opt) => <Text>{opt.value}</Text>}
+          onChange={(val) =>
+            onChange({
+              city,
+              district: val ?? '',
+              neighborhood: '',
+            })
+          }
+          status={
+            errors?.district ? { type: 'error', message: errors.district } : undefined
+          }
+          width="100%"
+        />
+      </Grid>
 
       <Selector
         label={`Mahalle${star}`}
@@ -207,6 +210,6 @@ export function LocationPicker({
         }
         width="100%"
       />
-    </Grid>
+    </VStack>
   );
 }
