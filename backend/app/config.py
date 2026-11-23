@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     app_title: str = "GİB e-Emlak Kurumsal Taşınmaz Platformu API"
-    app_version: str = "0.1.0-P0"
+    app_version: str = "0.2.0-P1"
     app_env: str = "development"
     database_url: str = (
         "postgresql+psycopg://gib_user:gib_password@localhost:5432/gib_emlak_db"
