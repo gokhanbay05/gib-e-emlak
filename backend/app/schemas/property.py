@@ -49,3 +49,20 @@ class PropertyUpdateRequest(BaseModel):
 
 class PropertyStatusUpdateRequest(BaseModel):
     status: str
+
+
+class CustomerSearchRequestCreate(BaseModel):
+    agency_id: int
+    customer_id: int
+    listing_type: str
+    property_type: str | None = None
+    min_sqm: int | None = None
+    max_sqm: int | None = None
+    room_count: str | None = None
+    floor_preference: int | None = None
+    heating_type: str | None = None
+    min_price: float | None = None
+    max_price: float | None = None
+    city: str | None = None
+    district: str | None = None
+    natural_language_prompt: str | None = None

@@ -6,6 +6,7 @@ import { AuthPage } from './pages/AuthPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { PropertiesPage } from './pages/PropertiesPage';
+import { PropertySearchPage } from './pages/PropertySearchPage';
 import { SystemPage } from './pages/SystemPage';
 import {
   DEFAULT_AGENT_SESSION,
@@ -19,14 +20,10 @@ import {
 const PLACEHOLDER_META: Record<
   Exclude<
     NavDestination,
-    'agency' | 'customers' | 'properties' | 'auth' | 'system'
+    'agency' | 'customers' | 'properties' | 'search' | 'auth' | 'system'
   >,
   { title: string; description: string }
 > = {
-  search: {
-    title: 'İlan Arama ve Yazıcı Çıktısı',
-    description: 'Çoklu filtreleme, talep eşleştirme ve PDF bilgi fişi çıktısı (P6).',
-  },
   marketplace: {
     title: 'Ortak İlan Vitrini',
     description: 'Girişsiz ilan gezme, filtreleme ve favoriler (P7).',
@@ -97,6 +94,16 @@ export default function App() {
     if (selectedNav === 'properties') {
       return (
         <PropertiesPage
+          currentUser={currentUser}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          onDataChanged={() => void loadOverview()}
+        />
+      );
+    }
+
+    if (selectedNav === 'search') {
+      return (
+        <PropertySearchPage
           currentUser={currentUser}
           onNavigateAuth={() => setSelectedNav('auth')}
           onDataChanged={() => void loadOverview()}

@@ -51,7 +51,7 @@ Uygulama şu uçtan uca senaryoyu her zaman kusursuz çalıştırmalıdır:
   2. `src/main.tsx` içinde `@astryxdesign/core/reset.css` ve `@astryxdesign/core/astryx.css` importları ile `<Theme theme={themes[defaultThemeSlug]}>` sarmalayıcısı korunacak.
   3. Raw `<div>` veya `<span>` KULLANILMAYACAK — tüm yerleşim ve metinler Astryx bileşenleriyle kurulacak.
   4. **Atomic Klasör & Global Layout Kuralı:**
-     - `src/types/` (ortak tipler), `src/api/` (merkezi `apiRequest` istemcisi ve servisler), `src/utils/` (`formatters.ts`, `validation.ts`), `src/components/common/` (`LocationPicker`, `LogoUploader`, `PropertyImageUploader`), `src/components/layout/` (`AppLayout`, `NavContent`, `PageFrame`), `src/pages/` (`AuthPage`, `AgencyProfilePage`, `CustomersPage`, `PropertiesPage`, `SystemPage`, ...).
+     - `src/types/` (ortak tipler), `src/api/` (merkezi `apiRequest` istemcisi ve servisler), `src/utils/` (`formatters.ts`, `validation.ts`), `src/components/common/` (`LocationPicker`, `LogoUploader`, `PropertyImageUploader`), `src/components/layout/` (`AppLayout`, `NavContent`, `PageFrame`), `src/pages/` (`AuthPage`, `AgencyProfilePage`, `CustomersPage`, `PropertiesPage`, `PropertySearchPage`, `SystemPage`, ...).
      - **Tüm sayfalar tek dikey hiza için global `PageFrame` (`LayoutHeader` + `LayoutContent`) içine sarılacak; iç içe `Section padding` ile çift boşluk oluşturulmayacak.**
      - Gereksiz `Token`/badge kalabalığı yapılmayacak; `isRequired`/`isOptional` yerine zorunlu alanlarda `*` ve form altında `* işaretli alanlar zorunludur.` notu kullanılacak.
      - Mobil uyumluluk için `Grid` kolonlarında `minWidth <= 280`, tüm `Table` bileşenlerinde `HStack isScrollable` ve `AppShell` üzerinde `MobileNav` + `MobileNavToggle` korunacak.
@@ -103,8 +103,8 @@ Tüm parçalar `backend/app/models.py` içindeki şu 8 PostgreSQL tablosunu teme
 - **`P3`**: İşyeri (Emlak Ofisi) Tanımı ve Kurumsal Profil Yönetimi - GİB Madde 1 (`feat(P3): ...`) — **[TAMAMLANDI]**
 - **`P4`**: Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay - GİB Madde 2 (`feat(P4): ...`) — **[TAMAMLANDI]**
 - **`P5`**: Portföy Yönetimi, "Sahipsiz Ev Olmaz" Kuralı, Hızlı Müşteri Bağlama ve Kimlik Kontrolü - GİB Madde 3 (`feat(P5): ...`) — **[TAMAMLANDI]**
-- **`P6`**: Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Bilgi Fişi Çıktısı - GİB Madde 4 (`feat(P6): ...`) — **[SIRADAKİ]**
-- **`P7`**: Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme (`feat(P7): ...`)
+- **`P6`**: Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Bilgi Fişi Çıktısı - GİB Madde 4 (`feat(P6): ...`) — **[TAMAMLANDI]**
+- **`P7`**: Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme (`feat(P7): ...`) — **[SIRADAKİ]**
 - **`P8`**: Randevu Yönetimi 1: Google Calendar Takvim Görünümü ve Manuel Saat Kapatma (`feat(P8): ...`)
 - **`P9`**: Randevu Yönetimi 2: Fiziki/Telefon Randevu Alma, Son 6 Saat İptal Kuralı ve Geçmiş Randevu Notları (`feat(P9): ...`)
 - **`P10`**: Yapay Zeka (AI) Destekli Doğal Dil Akıllı Arama ve Müşteri–Ev Eşleştirme (`feat(P10): ...`)

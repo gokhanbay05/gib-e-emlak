@@ -71,3 +71,11 @@ services:
 
 volumes:
   gib_postgres_data:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.250.250.0/24
+

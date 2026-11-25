@@ -130,7 +130,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P6` — Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Çıktısı (GİB 4. Madde & Altın Senaryo) ⏳
+### `P6` — Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Çıktısı (GİB 4. Madde & Altın Senaryo) ✅
 - **Kapsam:**
   - **Alıcı / Kiracı Müşteri Talebi ve Çoklu Filtreleme Ekranı:**
     - Emlakçı, arayan müşteriyi seçerek (veya doğrudan arama ekranında) müşterinin taleplerini girer ve uygun emlak olup olmadığını sorgular.

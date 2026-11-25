@@ -185,10 +185,30 @@ export type HeatingType =
   | 'SOBA';
 export type PropertyStatus = 'AKTIF' | 'SATILDI' | 'KIRALANDI' | 'PASIF';
 
+export interface PropertyAgencySummary {
+  id: number;
+  name: string;
+  authorized_person: string;
+  phone: string;
+  mobile_phone: string;
+  fax: string;
+  tax_office: string;
+  tax_number: string;
+  city: string;
+  district: string;
+  neighborhood: string;
+  address: string;
+  ttbs_document_no: string;
+  is_ttbs_verified: boolean;
+  logo_url: string;
+}
+
 export interface PropertyOwnerSummary {
   id: number;
   full_name: string;
   mobile_phone: string;
+  home_phone?: string;
+  email?: string;
   tc_identity_no: string;
   is_tc_verified: boolean;
   customer_type: string;
@@ -219,6 +239,46 @@ export interface PropertyRecord {
   image_url: string;
   created_at: string;
   owner: PropertyOwnerSummary | null;
+  agency?: PropertyAgencySummary | null;
+}
+
+export interface SearchRequestRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number | null;
+  customer_id: number;
+  customer_name: string;
+  customer_type: string;
+  customer_phone: string;
+  listing_type: string;
+  property_type: string;
+  min_sqm: number | null;
+  max_sqm: number | null;
+  room_count: string;
+  floor_preference: number | null;
+  heating_type: string;
+  min_price: number | null;
+  max_price: number | null;
+  city: string;
+  district: string;
+  natural_language_prompt: string;
+  created_at: string;
+}
+
+export interface PropertyInfoSheetData {
+  document_no: string;
+  generated_at: string;
+  property: PropertyRecord;
+  seeker_customer: {
+    id: number;
+    full_name: string;
+    customer_type: string;
+    mobile_phone: string;
+    home_phone: string;
+    email: string;
+    tc_identity_no: string;
+    notes: string;
+  } | null;
 }
 
 export interface PropertyCounts {
