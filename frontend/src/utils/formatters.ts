@@ -54,3 +54,47 @@ export function normalizeTurkish(text: string): string {
     .replace(/ö/g, 'o')
     .replace(/ç/g, 'c');
 }
+
+/** Türk Lirası (₺) para birimi biçimlendiricisi (Örn: ₺26.500). */
+export function formatCurrencyTRY(amount: number): string {
+  if (!Number.isFinite(amount)) return '₺0';
+  return new Intl.NumberFormat('tr-TR', {
+    style: 'currency',
+    currency: 'TRY',
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+export const LISTING_TYPE_LABELS: Record<string, string> = {
+  SATILIK: 'Satılık',
+  KIRALIK: 'Kiralık',
+};
+
+export const PROPERTY_TYPE_LABELS: Record<string, string> = {
+  DAIRE: 'Daire',
+  VILLA: 'Villa',
+  ISYERI: 'İşyeri',
+  ARSA: 'Arsa',
+};
+
+export const HEATING_TYPE_LABELS: Record<string, string> = {
+  DOGALGAZ_KOMBI: 'Doğalgaz Kombi',
+  MERKEZI: 'Merkezi Sistem',
+  YERDEN_ISITMA: 'Yerden Isıtma',
+  KLIMA: 'Klima',
+  SOBA: 'Soba',
+};
+
+export const PROPERTY_STATUS_LABELS: Record<string, string> = {
+  AKTIF: 'Aktif',
+  SATILDI: 'Satıldı',
+  KIRALANDI: 'Kiralandı',
+  PASIF: 'Pasif',
+};
+
+export const CUSTOMER_TYPE_LABELS: Record<string, string> = {
+  ALICI: 'Alıcı',
+  SATICI: 'Satıcı',
+  KIRALAYAN: 'Kiralayan (Mülk Sahibi)',
+  KIRACI: 'Kiracı',
+};

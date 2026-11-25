@@ -62,6 +62,83 @@ export interface AgencyRecord {
   };
 }
 
+export type CustomerType = 'ALICI' | 'SATICI' | 'KIRALAYAN' | 'KIRACI';
+
+export interface CustomerRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number | null;
+  first_name: string;
+  last_name: string;
+  full_name?: string;
+  mobile_phone: string;
+  home_phone: string;
+  email: string;
+  tc_identity_no: string;
+  is_tc_verified: boolean;
+  customer_type: CustomerType;
+  source: string;
+  notes: string;
+  created_at: string;
+  owned_property_count?: number;
+}
+
+export type ListingType = 'SATILIK' | 'KIRALIK';
+export type PropertyType = 'DAIRE' | 'VILLA' | 'ISYERI' | 'ARSA';
+export type RoomCountType = '1+0' | '1+1' | '2+1' | '3+1' | '4+1' | '5+1';
+export type HeatingType =
+  | 'DOGALGAZ_KOMBI'
+  | 'MERKEZI'
+  | 'YERDEN_ISITMA'
+  | 'KLIMA'
+  | 'SOBA';
+export type PropertyStatus = 'AKTIF' | 'SATILDI' | 'KIRALANDI' | 'PASIF';
+
+export interface PropertyOwnerSummary {
+  id: number;
+  full_name: string;
+  mobile_phone: string;
+  tc_identity_no: string;
+  is_tc_verified: boolean;
+  customer_type: string;
+}
+
+export interface PropertyRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number;
+  owner_customer_id: number;
+  title: string;
+  listing_type: ListingType;
+  property_type: PropertyType;
+  gross_sqm: number;
+  net_sqm: number;
+  room_count: string;
+  floor_number: number;
+  building_floors: number;
+  heating_type: HeatingType;
+  price: number;
+  city: string;
+  district: string;
+  neighborhood: string;
+  address_detail: string;
+  agent_description: string;
+  status: PropertyStatus;
+  is_owner_id_verified: boolean;
+  image_url: string;
+  created_at: string;
+  owner: PropertyOwnerSummary | null;
+}
+
+export interface PropertyCounts {
+  ALL: number;
+  AKTIF: number;
+  SATILDI: number;
+  KIRALANDI: number;
+  PASIF: number;
+  [key: string]: number;
+}
+
 export interface LocationOption {
   id: number;
   name: string;

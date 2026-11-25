@@ -10,6 +10,7 @@ from app.core.database import check_database_connection
 from app.routers.agencies import router as agencies_router
 from app.routers.auth import router as auth_router
 from app.routers.locations import router as locations_router
+from app.routers.properties import router as properties_router
 from app.routers.system import router as system_router
 from app.routers.uploads import router as uploads_router
 from app.seed import init_db_and_seed
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(system_router)
 app.include_router(auth_router)
 app.include_router(agencies_router)
+app.include_router(properties_router)
 app.include_router(locations_router)
 app.include_router(uploads_router)
 
