@@ -41,6 +41,43 @@ def turkish_sort_key(text: str) -> tuple:
     return tuple(TR_CHAR_ORDER.get(ch, 100 + ord(ch)) for ch in lowered)
 
 
+def normalize_turkish_search(text: str) -> str:
+    """Türkçe karakter duyarsız arama anahtarı üretir (Örn: 'Özkan' -> 'ozkan')."""
+    lowered = (text or "").replace("İ", "i").replace("I", "ı").lower()
+    table = str.maketrans(
+        {
+            "ı": "i",
+            "ğ": "g",
+            "ü": "u",
+            "ş": "s",
+            "ö": "o",
+            "ç": "c",
+        }
+    )
+    return lowered.translate(table)
+
+
+def validate_tc_identity_no(tc_no: str) -> tuple[bool, str, str]:
+    """
+    BR-04: 11 haneli T.C. Kimlik Numarası doğrulaması.
+    Kurallar: 11 rakam, 0 ile başlayamaz, çift rakamla biter, tüm haneler aynı olamaz.
+    """
+    cleaned = re.sub(r"\s+", "", tc_no or "")
+    error_msg = (
+        "Geçerli bir 11 haneli T.C. Kimlik Numarası giriniz "
+        "(0 ile başlayamaz ve çift rakamla bitmelidir)."
+    )
+    if len(cleaned) != 11 or not cleaned.isdigit():
+        return False, "", error_msg
+    if cleaned[0] == "0":
+        return False, "", error_msg
+    if int(cleaned[10]) % 2 != 0:
+        return False, "", error_msg
+    if len(set(cleaned)) <= 1:
+        return False, "", error_msg
+    return True, cleaned, ""
+
+
 def hash_password(raw_password: str) -> str:
     return hashlib.sha256(raw_password.encode("utf-8")).hexdigest()
 

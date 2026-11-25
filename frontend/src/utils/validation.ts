@@ -129,6 +129,77 @@ export const agencyProfileSchema = z.object({
     ),
 });
 
+const EMAIL_SIMPLE_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
+/**
+ * BR-04: 11 haneli T.C. Kimlik Numarası doğrulayıcısı.
+ * Kurallar: 11 rakam, 0 ile başlayamaz, çift rakamla biter, tüm haneler aynı olamaz.
+ */
+export function isValidTcIdentityNo(raw: string): boolean {
+  const cleaned = raw.replace(/\s+/g, '');
+  if (!/^\d{11}$/.test(cleaned)) return false;
+  if (cleaned[0] === '0') return false;
+  if (Number(cleaned[10]) % 2 !== 0) return false;
+  if (new Set(cleaned.split('')).size <= 1) return false;
+  return true;
+}
+
+export const customerSchema = z.object({
+  first_name: z
+    .string()
+    .trim()
+    .min(2, 'Ad alanı en az 2 karakter olmalıdır.')
+    .refine((v) => !DIGIT_REGEX.test(v), 'Ad alanı rakam içeremez.'),
+  last_name: z
+    .string()
+    .trim()
+    .min(2, 'Soyad alanı en az 2 karakter olmalıdır.')
+    .refine((v) => !DIGIT_REGEX.test(v), 'Soyad alanı rakam içeremez.'),
+  mobile_phone: z.string().refine((v) => {
+    const d = extractDigits(v);
+    return d.length === 11 && d.startsWith('05');
+  }, 'Geçerli bir cep telefonu giriniz (Örn: 0 (532) 123 45 67).'),
+  home_phone: z
+    .string()
+    .optional()
+    .refine(
+      (v) => {
+        if (!v || !v.trim()) return true;
+        const d = extractDigits(v);
+        return d.length === 11 && d.startsWith('0');
+      },
+      'Geçerli bir ev telefonu giriniz (Örn: 0 (312) 426 11 22).',
+    ),
+  email: z
+    .string()
+    .optional()
+    .refine(
+      (v) => {
+        if (!v || !v.trim()) return true;
+        return EMAIL_SIMPLE_REGEX.test(v.trim());
+      },
+      'Lütfen geçerli bir e-posta adresi giriniz.',
+    ),
+  tc_identity_no: z
+    .string()
+    .optional()
+    .refine(
+      (v) => {
+        if (!v || !v.trim()) return true;
+        return isValidTcIdentityNo(v);
+      },
+      'Geçerli bir 11 haneli T.C. Kimlik Numarası giriniz (0 ile başlayamaz ve çift rakamla bitmelidir).',
+    ),
+  customer_type: z
+    .string()
+    .trim()
+    .refine(
+      (v) => ['ALICI', 'SATICI', 'KIRALAYAN', 'KIRACI'].includes(v),
+      'Lütfen müşteri tipini seçiniz.',
+    ),
+  notes: z.string().optional(),
+});
+
 export function zodErrorsToMap(error: z.ZodError): Record<string, string> {
   const map: Record<string, string> = {};
   for (const issue of error.issues) {

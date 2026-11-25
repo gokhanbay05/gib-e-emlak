@@ -62,6 +62,117 @@ export interface AgencyRecord {
   };
 }
 
+export type CustomerType = 'ALICI' | 'SATICI' | 'KIRALAYAN' | 'KIRACI';
+
+export interface CustomerRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number | null;
+  first_name: string;
+  last_name: string;
+  full_name: string;
+  mobile_phone: string;
+  home_phone: string;
+  email: string;
+  tc_identity_no: string;
+  is_tc_verified: boolean;
+  customer_type: CustomerType;
+  source: string;
+  notes: string;
+  property_count: number;
+  appointment_count: number;
+  search_request_count: number;
+  created_at: string;
+}
+
+export interface CustomerCategoryCounts {
+  ALL: number;
+  ALICI: number;
+  SATICI: number;
+  KIRALAYAN: number;
+  KIRACI: number;
+}
+
+export interface CustomerOwnedProperty {
+  [key: string]: unknown;
+  id: number;
+  title: string;
+  listing_type: string;
+  property_type: string;
+  room_count: string;
+  gross_sqm: number;
+  net_sqm: number;
+  floor_number: number;
+  building_floors: number;
+  heating_type: string;
+  price: number;
+  city: string;
+  district: string;
+  neighborhood: string;
+  status: string;
+  is_owner_id_verified: boolean;
+  image_url: string;
+  created_at: string;
+}
+
+export interface CustomerAppointmentItem {
+  [key: string]: unknown;
+  id: number;
+  appointment_type: string;
+  purpose: string;
+  property_id: number | null;
+  property_title: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  meeting_notes: string;
+}
+
+export interface CustomerSearchRequestItem {
+  [key: string]: unknown;
+  id: number;
+  listing_type: string;
+  property_type: string | null;
+  room_count: string | null;
+  min_sqm: number | null;
+  max_sqm: number | null;
+  min_price: number | null;
+  max_price: number | null;
+  city: string | null;
+  district: string | null;
+  natural_language_prompt: string | null;
+  created_at: string;
+}
+
+export interface CustomerDetailRecord extends CustomerRecord {
+  owned_properties: CustomerOwnedProperty[];
+  appointments: CustomerAppointmentItem[];
+  search_requests: CustomerSearchRequestItem[];
+}
+
+export interface CustomerCreatePayload {
+  agency_id: number;
+  first_name: string;
+  last_name: string;
+  mobile_phone: string;
+  home_phone?: string;
+  email?: string;
+  tc_identity_no?: string;
+  customer_type: CustomerType | string;
+  notes?: string;
+}
+
+export interface CustomerUpdatePayload {
+  first_name: string;
+  last_name: string;
+  mobile_phone: string;
+  home_phone?: string;
+  email?: string;
+  tc_identity_no?: string;
+  customer_type: CustomerType | string;
+  notes?: string;
+}
+
 export interface LocationOption {
   id: number;
   name: string;

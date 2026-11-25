@@ -3,6 +3,7 @@ import { fetchSystemOverview } from './api/agencies';
 import { AppLayout } from './components/layout/AppLayout';
 import { AgencyProfilePage } from './pages/AgencyProfilePage';
 import { AuthPage } from './pages/AuthPage';
+import { CustomersPage } from './pages/CustomersPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { SystemPage } from './pages/SystemPage';
 import {
@@ -15,13 +16,9 @@ import {
 } from './types';
 
 const PLACEHOLDER_META: Record<
-  Exclude<NavDestination, 'agency' | 'auth' | 'system'>,
+  Exclude<NavDestination, 'agency' | 'customers' | 'auth' | 'system'>,
   { title: string; description: string }
 > = {
-  customers: {
-    title: 'Müşteri Yönetimi',
-    description: 'Alıcı, satıcı, kiralık mülk sahibi ve kiracı müşteri kayıtları (P4).',
-  },
   properties: {
     title: 'Portföy Yönetimi',
     description: 'Gayrimenkul ilan kaydı, hızlı müşteri bağlama ve kimlik doğrulama (P5).',
@@ -83,6 +80,16 @@ export default function App() {
           currentUser={currentUser}
           onAgencyUpdated={handleAgencyUpdated}
           onNavigateAuth={() => setSelectedNav('auth')}
+        />
+      );
+    }
+
+    if (selectedNav === 'customers') {
+      return (
+        <CustomersPage
+          currentUser={currentUser}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          onDataChanged={() => void loadOverview()}
         />
       );
     }
