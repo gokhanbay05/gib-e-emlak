@@ -34,11 +34,11 @@ Uygulama şu uçtan uca senaryoyu her zaman kusursuz çalıştırmalıdır:
 - **ORM & DB:** **SQLAlchemy 2.0** + **PostgreSQL 16** (`psycopg[binary]`).
   - *Yasak:* Microsoft SQL Server veya SQLite ana veritabanı olarak kullanılmayacak; PostgreSQL ilişkisel şeması esas alınacak.
 - **Atomic Backend Klasör Mimarisi (Zorunlu):**
-  - `backend/app/core/`: `config.py`, `database.py`, `validators.py` (ortak telefon/şifre/TTBS/Türkçe sıralama doğrulayıcıları)
+  - `backend/app/core/`: `config.py`, `database.py`, `validators.py` (ortak telefon/şifre/TTBS/T.C. Kimlik/Türkçe sıralama ve arama doğrulayıcıları)
   - `backend/app/models/`: Modül bazlı SQLAlchemy modelleri (`agency.py`, `user.py`, `customer.py`, `property.py`, `appointment.py`)
-  - `backend/app/schemas/`: Pydantic giriş/çıkış şemaları (`auth.py`, `agency.py`, ...)
+  - `backend/app/schemas/`: Pydantic giriş/çıkış şemaları (`auth.py`, `agency.py`, `customer.py`, `property.py`, ...)
   - `backend/app/services/`: Harici API ve iş mantığı servisleri (`location_service.py`, ...)
-  - `backend/app/routers/`: İnce HTTP yönlendiricileri (`system.py`, `auth.py`, `agencies.py`, `locations.py`, `uploads.py`)
+  - `backend/app/routers/`: İnce HTTP yönlendiricileri (`system.py`, `auth.py`, `agencies.py`, `customers.py`, `properties.py`, `locations.py`, `uploads.py`)
 - **API Standartları:**
   - Tüm endpoint'ler `/api/...` altında gruplanır (`/api/health`, `/api/system/overview`, `/api/auth`, `/api/agencies`, `/api/customers`, `/api/properties`, `/api/appointments`, `/api/reports`, `/api/verify`).
   - İş kuralı ihlallerinde anlamlı Türkçe hata mesajı ve `field_errors` sözlüğü dönülür.
@@ -51,7 +51,7 @@ Uygulama şu uçtan uca senaryoyu her zaman kusursuz çalıştırmalıdır:
   2. `src/main.tsx` içinde `@astryxdesign/core/reset.css` ve `@astryxdesign/core/astryx.css` importları ile `<Theme theme={themes[defaultThemeSlug]}>` sarmalayıcısı korunacak.
   3. Raw `<div>` veya `<span>` KULLANILMAYACAK — tüm yerleşim ve metinler Astryx bileşenleriyle kurulacak.
   4. **Atomic Klasör & Global Layout Kuralı:**
-     - `src/types/` (ortak tipler), `src/api/` (merkezi `apiRequest` istemcisi ve servisler), `src/utils/` (`formatters.ts`, `validation.ts`), `src/components/common/` (`LocationPicker`, `LogoUploader`), `src/components/layout/` (`AppLayout`, `NavContent`, `PageFrame`), `src/pages/` (ekran sayfaları).
+     - `src/types/` (ortak tipler), `src/api/` (merkezi `apiRequest` istemcisi ve servisler), `src/utils/` (`formatters.ts`, `validation.ts`), `src/components/common/` (`LocationPicker`, `LogoUploader`, `PropertyImageUploader`), `src/components/layout/` (`AppLayout`, `NavContent`, `PageFrame`), `src/pages/` (`AuthPage`, `AgencyProfilePage`, `CustomersPage`, `PropertiesPage`, `SystemPage`, ...).
      - **Tüm sayfalar tek dikey hiza için global `PageFrame` (`LayoutHeader` + `LayoutContent`) içine sarılacak; iç içe `Section padding` ile çift boşluk oluşturulmayacak.**
      - Gereksiz `Token`/badge kalabalığı yapılmayacak; `isRequired`/`isOptional` yerine zorunlu alanlarda `*` ve form altında `* işaretli alanlar zorunludur.` notu kullanılacak.
      - Mobil uyumluluk için `Grid` kolonlarında `minWidth <= 280`, tüm `Table` bileşenlerinde `HStack isScrollable` ve `AppShell` üzerinde `MobileNav` + `MobileNavToggle` korunacak.
