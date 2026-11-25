@@ -142,7 +142,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P7` — Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme ⏳
+### `P7` — Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme ✅
 - **Kapsam:**
   - **Giriş Yapmadan (Ziyaretçi Modu):** Sisteme giriş yapmayan herkes tüm emlakçı ilanlarını görebilir, tüm klasik filtreleri (Satılık/Kiralık, tür, fiyat, m², oda, kat, ısınma, konum) kullanarak ilan arayabilir ve ilan detaylarını inceleyebilir.
   - **Kayıtlı Müşteri Özellikleri:**
@@ -153,7 +153,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P8` — Randevu Yönetimi — Bölüm 1: Google Calendar Takvim Görünümü ve Manuel Saat Kapatma ⏳
+### `P8` — Randevu Yönetimi — Bölüm 1: Google Calendar Takvim Görünümü ve Manuel Saat Kapatma ✅
 - **Kapsam:**
   - **Emlakçı Takvim Ekranı:** Google Calendar tarzı haftalık ve günlük saat dilimli (`09:00` – `21:00`) görsel takvim arayüzü.
   - **Müsaitlik Görme & Manuel Saat Kapatma (Reddetme Yok):**

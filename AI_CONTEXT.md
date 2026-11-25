@@ -36,9 +36,9 @@ Uygulama şu uçtan uca senaryoyu her zaman kusursuz çalıştırmalıdır:
 - **Atomic Backend Klasör Mimarisi (Zorunlu):**
   - `backend/app/core/`: `config.py`, `database.py`, `validators.py` (ortak telefon/şifre/TTBS/T.C. Kimlik/Türkçe sıralama ve arama doğrulayıcıları)
   - `backend/app/models/`: Modül bazlı SQLAlchemy modelleri (`agency.py`, `user.py`, `customer.py`, `property.py`, `appointment.py`)
-  - `backend/app/schemas/`: Pydantic giriş/çıkış şemaları (`auth.py`, `agency.py`, `customer.py`, `property.py`, ...)
+  - `backend/app/schemas/`: Pydantic giriş/çıkış şemaları (`auth.py`, `agency.py`, `customer.py`, `property.py`, `favorite.py`, `appointment.py`, ...)
   - `backend/app/services/`: Harici API ve iş mantığı servisleri (`location_service.py`, ...)
-  - `backend/app/routers/`: İnce HTTP yönlendiricileri (`system.py`, `auth.py`, `agencies.py`, `customers.py`, `properties.py`, `locations.py`, `uploads.py`)
+  - `backend/app/routers/`: İnce HTTP yönlendiricileri (`system.py`, `auth.py`, `agencies.py`, `customers.py`, `properties.py`, `favorites.py`, `appointments.py`, `locations.py`, `uploads.py`)
 - **API Standartları:**
   - Tüm endpoint'ler `/api/...` altında gruplanır (`/api/health`, `/api/system/overview`, `/api/auth`, `/api/agencies`, `/api/customers`, `/api/properties`, `/api/appointments`, `/api/reports`, `/api/verify`).
   - İş kuralı ihlallerinde anlamlı Türkçe hata mesajı ve `field_errors` sözlüğü dönülür.
@@ -104,8 +104,8 @@ Tüm parçalar `backend/app/models.py` içindeki şu 8 PostgreSQL tablosunu teme
 - **`P4`**: Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay - GİB Madde 2 (`feat(P4): ...`) — **[TAMAMLANDI]**
 - **`P5`**: Portföy Yönetimi, "Sahipsiz Ev Olmaz" Kuralı, Hızlı Müşteri Bağlama ve Kimlik Kontrolü - GİB Madde 3 (`feat(P5): ...`) — **[TAMAMLANDI]**
 - **`P6`**: Detaylı İlan Arama, Çoklu Filtreleme ve Yazıcı / PDF Bilgi Fişi Çıktısı - GİB Madde 4 (`feat(P6): ...`) — **[TAMAMLANDI]**
-- **`P7`**: Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme (`feat(P7): ...`) — **[SIRADAKİ]**
-- **`P8`**: Randevu Yönetimi 1: Google Calendar Takvim Görünümü ve Manuel Saat Kapatma (`feat(P8): ...`)
-- **`P9`**: Randevu Yönetimi 2: Fiziki/Telefon Randevu Alma, Son 6 Saat İptal Kuralı ve Geçmiş Randevu Notları (`feat(P9): ...`)
+- **`P7`**: Müşteri Vitrini: Girişsiz İlan Gezme, Favoriler ve "Ev Satacağım" Emlakçı Listeleme (`feat(P7): ...`) — **[TAMAMLANDI]**
+- **`P8`**: Randevu Yönetimi 1: Google Calendar Takvim Görünümü ve Manuel Saat Kapatma (`feat(P8): ...`) — **[TAMAMLANDI]**
+- **`P9`**: Randevu Yönetimi 2: Fiziki/Telefon Randevu Alma, Son 6 Saat İptal Kuralı ve Geçmiş Randevu Notları (`feat(P9): ...`) — **[SIRADAKİ]**
 - **`P10`**: Yapay Zeka (AI) Destekli Doğal Dil Akıllı Arama ve Müşteri–Ev Eşleştirme (`feat(P10): ...`)
 - **`P11`**: Raporlama ve Performans Analitiği Ekranı (Randevu Saatleri, Satılan/Kiralanan Evler, Müşteri Kırılımı) (`feat(P11): ...`)

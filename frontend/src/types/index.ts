@@ -364,3 +364,117 @@ export const DEFAULT_AGENT_SESSION: UserSession = {
   },
   customer: null,
 };
+
+export interface FavoriteItemRecord {
+  [key: string]: unknown;
+  id: number;
+  user_id: number;
+  property_id: number;
+  created_at: string;
+  property: PropertyRecord | null;
+}
+
+export interface AgencySellRequestPayload {
+  owner_first_name: string;
+  owner_last_name: string;
+  mobile_phone: string;
+  email?: string;
+  tc_identity_no?: string;
+  listing_type: ListingType;
+  property_type: PropertyType;
+  room_count: string;
+  gross_sqm: number;
+  expected_price: number;
+  city: string;
+  district: string;
+  neighborhood: string;
+  address_detail?: string;
+  property_notes?: string;
+}
+
+export interface AgencySellRequestSummary {
+  [key: string]: unknown;
+  reference_no: string;
+  agency_id: number;
+  agency_name: string;
+  customer_id: number;
+  owner_full_name: string;
+  mobile_phone: string;
+  listing_type: string;
+  property_type: string;
+  room_count: string;
+  gross_sqm: number;
+  expected_price: number;
+  city: string;
+  district: string;
+  neighborhood: string;
+  notes: string;
+  created_at: string;
+}
+
+export type AppointmentType = 'FIZIKI' | 'TELEFON';
+export type AppointmentPurpose =
+  | 'ILAN_GOSTERIMI'
+  | 'MULK_SATIS_YETKISI'
+  | 'GENEL_DANISMANLIK';
+export type AppointmentStatus = 'AKTIF' | 'TAMAMLANDI' | 'IPTAL_EDILDI';
+
+export interface CalendarAppointmentRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number;
+  agency_name: string;
+  property_id: number | null;
+  property_title: string;
+  property_location: string;
+  customer_id: number;
+  customer_name: string;
+  customer_phone: string;
+  customer_type: string;
+  appointment_type: AppointmentType;
+  purpose: AppointmentPurpose;
+  start_time: string;
+  end_time: string;
+  status: AppointmentStatus;
+  meeting_notes: string;
+  cancelled_at: string | null;
+  can_cancel: boolean;
+  hours_until_start: number;
+  created_at: string;
+}
+
+export interface BlockedSlotRecord {
+  [key: string]: unknown;
+  id: number;
+  agency_id: number;
+  start_time: string;
+  end_time: string;
+  reason: string;
+  created_at: string;
+}
+
+export interface CalendarCounts {
+  total_appointments: number;
+  active_appointments: number;
+  completed_appointments: number;
+  cancelled_appointments: number;
+  blocked_slots_count: number;
+}
+
+export interface CalendarOverviewResponse {
+  agency_id: number;
+  appointments: CalendarAppointmentRecord[];
+  blocked_slots: BlockedSlotRecord[];
+  counts: CalendarCounts;
+  working_hours: {
+    start_hour: number;
+    end_hour: number;
+  };
+}
+
+export interface BlockedSlotCreatePayload {
+  agency_id: number;
+  start_time: string;
+  end_time: string;
+  reason: string;
+}

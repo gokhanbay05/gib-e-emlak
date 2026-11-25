@@ -1,4 +1,9 @@
-import type { AgencyRecord, SystemOverview } from '../types';
+import type {
+  AgencyRecord,
+  AgencySellRequestPayload,
+  AgencySellRequestSummary,
+  SystemOverview,
+} from '../types';
 import { apiRequest } from './client';
 
 export interface AgencyUpdatePayload {
@@ -43,4 +48,26 @@ export function updateAgencyById(
 
 export function fetchSystemOverview(): Promise<SystemOverview> {
   return apiRequest<SystemOverview>('/api/system/overview');
+}
+
+export function createAgencySellRequest(
+  agencyId: number,
+  payload: AgencySellRequestPayload,
+): Promise<{ message: string; sell_request: AgencySellRequestSummary }> {
+  return apiRequest<{ message: string; sell_request: AgencySellRequestSummary }>(
+    `/api/agencies/${agencyId}/sell-requests`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+export function fetchAgencySellRequests(
+  agencyId: number,
+): Promise<{ sell_requests: AgencySellRequestSummary[] }> {
+  return apiRequest<{ sell_requests: AgencySellRequestSummary[] }>(
+    `/api/agencies/${agencyId}/sell-requests`,
+  );
 }

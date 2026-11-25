@@ -3,10 +3,13 @@ import { fetchSystemOverview } from './api/agencies';
 import { AppLayout } from './components/layout/AppLayout';
 import { AgencyProfilePage } from './pages/AgencyProfilePage';
 import { AuthPage } from './pages/AuthPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { CustomersPage } from './pages/CustomersPage';
+import { MarketplacePage } from './pages/MarketplacePage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
 import { PropertiesPage } from './pages/PropertiesPage';
 import { PropertySearchPage } from './pages/PropertySearchPage';
+import { SellRequestPage } from './pages/SellRequestPage';
 import { SystemPage } from './pages/SystemPage';
 import {
   DEFAULT_AGENT_SESSION,
@@ -20,22 +23,18 @@ import {
 const PLACEHOLDER_META: Record<
   Exclude<
     NavDestination,
-    'agency' | 'customers' | 'properties' | 'search' | 'auth' | 'system'
+    | 'agency'
+    | 'customers'
+    | 'properties'
+    | 'search'
+    | 'calendar'
+    | 'marketplace'
+    | 'sell-request'
+    | 'auth'
+    | 'system'
   >,
   { title: string; description: string }
 > = {
-  marketplace: {
-    title: 'Ortak İlan Vitrini',
-    description: 'Girişsiz ilan gezme, filtreleme ve favoriler (P7).',
-  },
-  'sell-request': {
-    title: 'Evimi Sat / Emlakçı Seç',
-    description: 'Yetki belgeli emlak ofislerini listeleme ve satış başvurusu (P7).',
-  },
-  calendar: {
-    title: 'Randevu Takvimi',
-    description: 'Saat dilimli takvim, manuel saat kapatma ve 6 saat iptal kuralı (P8–P9).',
-  },
   'ai-match': {
     title: 'Akıllı Eşleştirme',
     description: 'Doğal dil tasviri ile yapay zeka destekli ilan eşleştirme (P10).',
@@ -48,6 +47,9 @@ const PLACEHOLDER_META: Record<
 
 export default function App() {
   const [selectedNav, setSelectedNav] = useState<NavDestination>('agency');
+  const [marketplaceAgencyId, setMarketplaceAgencyId] = useState<number | null>(
+    null,
+  );
   const [currentUser, setCurrentUser] = useState<UserSession>(
     DEFAULT_AGENT_SESSION,
   );
@@ -111,6 +113,42 @@ export default function App() {
       );
     }
 
+    if (selectedNav === 'calendar') {
+      return (
+        <CalendarPage
+          currentUser={currentUser}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          onDataChanged={() => void loadOverview()}
+        />
+      );
+    }
+
+    if (selectedNav === 'marketplace') {
+      return (
+        <MarketplacePage
+          currentUser={currentUser}
+          onNavigate={setSelectedNav}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          initialAgencyId={marketplaceAgencyId}
+        />
+      );
+    }
+
+    if (selectedNav === 'sell-request') {
+      return (
+        <SellRequestPage
+          currentUser={currentUser}
+          onNavigate={setSelectedNav}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          onDataChanged={() => void loadOverview()}
+          onViewAgencyListings={(agencyId) => {
+            setMarketplaceAgencyId(agencyId);
+            setSelectedNav('marketplace');
+          }}
+        />
+      );
+    }
+
     if (selectedNav === 'auth') {
       return (
         <AuthPage
@@ -138,7 +176,12 @@ export default function App() {
   return (
     <AppLayout
       selectedNav={selectedNav}
-      onNavigate={setSelectedNav}
+      onNavigate={(dest) => {
+        if (dest === 'marketplace') {
+          setMarketplaceAgencyId(null);
+        }
+        setSelectedNav(dest);
+      }}
       currentUser={currentUser}
       onLogout={() => setCurrentUser(VISITOR_SESSION)}
     >
