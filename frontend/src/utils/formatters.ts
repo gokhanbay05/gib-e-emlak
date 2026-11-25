@@ -125,7 +125,7 @@ export function formatListingTypeLabel(type: string): string {
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   DAIRE: 'Daire',
   VILLA: 'Villa',
-  ISYERI: 'İşyeri / Ofis',
+  ISYERI: 'İşyeri',
   ARSA: 'Arsa',
 };
 

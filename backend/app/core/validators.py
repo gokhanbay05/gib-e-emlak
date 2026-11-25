@@ -34,6 +34,13 @@ DEFAULT_AGENCY_LOGOS = [
     "https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=300&fit=crop",
 ]
 
+DEFAULT_PROPERTY_IMAGES = [
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
+    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
+    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
+    "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800",
+]
+
 
 def turkish_sort_key(text: str) -> tuple:
     """Türkçe harfleri doğru alfabetik sıraya göre karşılaştırma anahtarı üretir."""
@@ -55,6 +62,10 @@ def normalize_turkish_search(text: str) -> str:
         }
     )
     return lowered.translate(table)
+
+
+# P4 ve P5 modüllerinin ortak Türkçe arama normalleştirici takma adı
+normalize_tr_search = normalize_turkish_search
 
 
 def validate_tc_identity_no(tc_no: str) -> tuple[bool, str, str]:

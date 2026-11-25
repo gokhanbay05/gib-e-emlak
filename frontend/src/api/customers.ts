@@ -67,7 +67,7 @@ export function createCustomer(
 export function updateCustomer(
   customerId: number,
   payload: CustomerUpdatePayload,
-): Promise<{ message: string; customer: CustomerRecord }> {
+): Promise<{ message: string; customer: CustomerRecord }>{
   return apiRequest<{ message: string; customer: CustomerRecord }>(
     `/api/customers/${customerId}`,
     {

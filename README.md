@@ -104,7 +104,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P4` — Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay (GİB 2. Madde) ⏳
+### `P4` — Müşteri Yönetimi, Filtreleme Tablosu ve Yan Panel (Drawer) Detay (GİB 2. Madde) ✅
 - **Kapsam:**
   - **Manuel Müşteri Kayıt Ekranı:** Emlakçının müşterilerini kaydettiği form (Adı, Soyadı, Cep Telefonu [zorunlu], Ev Telefonu [opsiyonel], E-posta Adresi, TC Kimlik No, Müşteri Tipi: **Alıcı / Satıcı / Kiralık Mülk Sahibi / Kiracı**, Açıklama/Not).
   - **Müşteri Listeleme, Arama ve Sıralama Tablosu:**
@@ -115,7 +115,7 @@ Proje, temel omurgadan başlayıp en karmaşık özelliklere (Takvim kuralları,
 
 ---
 
-### `P5` — Portföy (Emlak) Yönetimi, "Sahipsiz Ev Olmaz" Kuralı ve Kimlik Kontrolü (GİB 3. Madde) ⏳
+### `P5` — Portföy (Emlak) Yönetimi, "Sahipsiz Ev Olmaz" Kuralı ve Kimlik Kontrolü (GİB 3. Madde) ✅
 - **Kapsam:**
   - **Yeni Emlak / İlan Kayıt Ekranı:**
     - **Teknik Özellikler:** İlan Başlığı, İşlem Türü (**Satılık / Kiralık**), Emlak Türü (**Daire, Villa, İşyeri, Arsa**), Fiyat (TL), Brüt Metrekare (m²), Net Metrekare (m²), Oda Sayısı (`1+0`, `1+1`, `2+1`, `3+1`, `4+1`, `5+1+`), Bulunduğu Kat, Bina Toplam Kat Sayısı, Isınma Türü (**Doğalgaz Kombi, Merkezi Sistem, Yerden Isıtma, Klima, Soba**), İl, İlçe, Mahalle, Açık Adres, İlan Görseli.

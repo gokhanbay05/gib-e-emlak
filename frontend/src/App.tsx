@@ -5,6 +5,7 @@ import { AgencyProfilePage } from './pages/AgencyProfilePage';
 import { AuthPage } from './pages/AuthPage';
 import { CustomersPage } from './pages/CustomersPage';
 import { PlaceholderPage } from './pages/PlaceholderPage';
+import { PropertiesPage } from './pages/PropertiesPage';
 import { SystemPage } from './pages/SystemPage';
 import {
   DEFAULT_AGENT_SESSION,
@@ -16,13 +17,12 @@ import {
 } from './types';
 
 const PLACEHOLDER_META: Record<
-  Exclude<NavDestination, 'agency' | 'customers' | 'auth' | 'system'>,
+  Exclude<
+    NavDestination,
+    'agency' | 'customers' | 'properties' | 'auth' | 'system'
+  >,
   { title: string; description: string }
 > = {
-  properties: {
-    title: 'Portföy Yönetimi',
-    description: 'Gayrimenkul ilan kaydı, hızlı müşteri bağlama ve kimlik doğrulama (P5).',
-  },
   search: {
     title: 'İlan Arama ve Yazıcı Çıktısı',
     description: 'Çoklu filtreleme, talep eşleştirme ve PDF bilgi fişi çıktısı (P6).',
@@ -87,6 +87,16 @@ export default function App() {
     if (selectedNav === 'customers') {
       return (
         <CustomersPage
+          currentUser={currentUser}
+          onNavigateAuth={() => setSelectedNav('auth')}
+          onDataChanged={() => void loadOverview()}
+        />
+      );
+    }
+
+    if (selectedNav === 'properties') {
+      return (
+        <PropertiesPage
           currentUser={currentUser}
           onNavigateAuth={() => setSelectedNav('auth')}
           onDataChanged={() => void loadOverview()}
