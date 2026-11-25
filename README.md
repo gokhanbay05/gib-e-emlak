@@ -30,30 +30,33 @@
 
 ## 3. Hızlı Kurulum ve Çalıştırma
 
-### 1) PostgreSQL Veritabanını ve Görsel Arayüzü Başlat (Docker)
+### Seçenek A: Tek Komutla Tüm Sistemi Başlat (Docker Compose — Önerilen)
+PostgreSQL, pgAdmin 4, FastAPI Backend ve React/Vite Frontend servislerini tek seferde build edip ayağa kaldırır (hot-reload aktif):
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
-- **Görsel Tablo Arayüzü (pgAdmin 4):** [http://localhost:5050](http://localhost:5050) (Sol menüden `Servers -> GIB e-Emlak PostgreSQL -> Databases -> gib_emlak_db -> Schemas -> public -> Tables` yolunu izleyin; şifre sorarsa: `gib_password`).
-
-### 2) Backend'i Başlat (`http://localhost:8000`)
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python -m app.seed
-uvicorn app.main:app --reload --port 8000
-```
+- **Uygulama (Frontend):** [http://localhost:5173](http://localhost:5173)
 - **Swagger API Dokümantasyonu:** [http://localhost:8000/docs](http://localhost:8000/docs)
 - **Sağlık & DB Kontrolü:** [http://localhost:8000/api/health](http://localhost:8000/api/health)
+- **pgAdmin 4 (DB Arayüzü):** [http://localhost:5050](http://localhost:5050) (Şifre sorarsa: `gib_password`)
+- Durdurmak için: `docker compose down` · Sonraki açılışlarda yalnızca `docker compose up -d` yeterlidir.
 
-### 3) Frontend'i Başlat (`http://localhost:5173`)
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Seçenek B: Yerel Ortamda Manuel Başlatma
+1. **Veritabanı:** `docker compose up -d postgres pgadmin`
+2. **Backend (`http://localhost:8000`):**
+   ```bash
+   cd backend
+   python3 -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   uvicorn app.main:app --reload --port 8000
+   ```
+3. **Frontend (`http://localhost:5173`):**
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
 
 ---
 

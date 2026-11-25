@@ -34,5 +34,40 @@ services:
     volumes:
       - ./docker/pgadmin-servers.json:/pgadmin4/servers.json:ro
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gib_emlak_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://gib_user:gib_password@postgres:5432/gib_emlak_db
+      APP_ENV: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+      - ./backend/uploads:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: gib_emlak_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      VITE_API_PROXY_TARGET: http://backend:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
+
 volumes:
   gib_postgres_data:
