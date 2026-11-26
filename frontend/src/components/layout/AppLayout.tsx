@@ -14,18 +14,21 @@ interface AppLayoutProps {
   selectedNav: NavDestination;
   onNavigate: (dest: NavDestination) => void;
   currentUser: UserSession;
+  onOpenAuth: () => void;
   onLogout: () => void;
   children: ReactNode;
 }
 
 /**
- * Kurumsal, sade ve tam mobil uyumlu ana uygulama çerçevesi.
- * contentPadding={0} ile iç boşluk sahipliği tek noktadan `PageFrame` bileşenine verilir.
+ * Rol bazlı ana uygulama çerçevesi.
+ * - Emlakçı, Müşteri ve Ziyaretçi yalnızca kendi yetkili menülerini görür.
+ * - Mobilde MobileNav çekmecesi ile tam uyumludur.
  */
 export function AppLayout({
   selectedNav,
   onNavigate,
   currentUser,
+  onOpenAuth,
   onLogout,
   children,
 }: AppLayoutProps) {
@@ -37,14 +40,17 @@ export function AppLayout({
   };
 
   const navHeadingTitle =
-    currentUser.agency?.name ??
-    (currentUser.role === 'CUSTOMER' ? currentUser.full_name : 'Ziyaretçi Modu');
+    currentUser.role === 'AGENT'
+      ? (currentUser.agency?.name ?? 'Emlak İşletmesi')
+      : currentUser.role === 'CUSTOMER'
+        ? currentUser.full_name
+        : 'Ziyaretçi Modu';
 
   const navHeadingSubtitle =
     currentUser.role === 'AGENT'
       ? 'Emlak İşletmesi Paneli'
       : currentUser.role === 'CUSTOMER'
-        ? 'Bireysel Üyelik'
+        ? 'Kayıtlı Müşteri'
         : 'Girişsiz Gezinme';
 
   return (
@@ -60,27 +66,33 @@ export function AppLayout({
             </HStack>
           }
           endContent={
-            <HStack gap={1.5} vAlign="center">
-              <Avatar
-                name={currentUser.full_name}
-                src={currentUser.agency?.logo_url ?? undefined}
-                size="sm"
-              />
-              <Button
-                label={currentUser.role === 'VISITOR' ? 'Giriş Yap' : 'Hesap'}
-                variant="secondary"
-                size="sm"
-                onClick={() => handleNavigate('auth')}
-              />
-              {currentUser.role !== 'VISITOR' && (
+            currentUser.role === 'VISITOR' ? (
+              <HStack gap={1.5} vAlign="center">
                 <Button
-                  label="Çıkış"
+                  label="Giriş Yap / Kayıt Ol"
+                  variant="primary"
+                  size="sm"
+                  onClick={onOpenAuth}
+                />
+              </HStack>
+            ) : (
+              <HStack gap={1.5} vAlign="center">
+                <Avatar
+                  name={currentUser.full_name}
+                  src={currentUser.agency?.logo_url ?? undefined}
+                  size="sm"
+                />
+                <Text size="sm" weight="medium">
+                  {currentUser.full_name}
+                </Text>
+                <Button
+                  label="Çıkış Yap"
                   variant="ghost"
                   size="sm"
                   onClick={onLogout}
                 />
-              )}
-            </HStack>
+              </HStack>
+            )
           }
         />
       }
@@ -94,7 +106,11 @@ export function AppLayout({
             />
           }
         >
-          <NavContent selectedNav={selectedNav} onNavigate={handleNavigate} />
+          <NavContent
+            role={currentUser.role}
+            selectedNav={selectedNav}
+            onNavigate={handleNavigate}
+          />
         </SideNav>
       }
       mobileNav={
@@ -109,7 +125,11 @@ export function AppLayout({
             />
           }
         >
-          <NavContent selectedNav={selectedNav} onNavigate={handleNavigate} />
+          <NavContent
+            role={currentUser.role}
+            selectedNav={selectedNav}
+            onNavigate={handleNavigate}
+          />
         </MobileNav>
       }
     >

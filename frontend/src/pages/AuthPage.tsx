@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react';
-import { Avatar } from '@astryxdesign/core/Avatar';
+import { useState } from 'react';
+import { AppShell } from '@astryxdesign/core/AppShell';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Grid } from '@astryxdesign/core/Grid';
 import { Heading } from '@astryxdesign/core/Heading';
 import { HStack } from '@astryxdesign/core/HStack';
+import { Layout, LayoutContent } from '@astryxdesign/core/Layout';
 import { Tab, TabList } from '@astryxdesign/core/TabList';
-import { Table, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useToast } from '@astryxdesign/core/Toast';
+import { TopNav } from '@astryxdesign/core/TopNav';
 import { VStack } from '@astryxdesign/core/VStack';
 import {
-  fetchRegisteredUsers,
   loginAccount,
   registerAccount,
   verifyTtbsDocument,
@@ -21,12 +21,7 @@ import {
 import { ApiError } from '../api/client';
 import { LocationPicker } from '../components/common/LocationPicker';
 import { LogoUploader } from '../components/common/LogoUploader';
-import { PageFrame } from '../components/layout/PageFrame';
-import {
-  type TTBSVerifyResult,
-  type UserSession,
-  VISITOR_SESSION,
-} from '../types';
+import type { TTBSVerifyResult, UserSession } from '../types';
 import {
   formatDigitsOnly,
   formatTurkishPhone,
@@ -40,23 +35,26 @@ import {
 } from '../utils/validation';
 
 interface AuthPageProps {
-  currentUser: UserSession;
-  onSelectSession: (session: UserSession) => void;
-  onDataChanged: () => void;
+  onAuthenticated: (session: UserSession) => void;
+  onContinueAsVisitor: () => void;
 }
 
 /**
- * Kayıt Ol / Giriş Yap, Yetki Belgesi Doğrulama ve Demo Hesap Geçiş ekranı.
+ * Uygulamanın açılış giriş/kayıt ekranı.
+ * Yan menü olmadan tam ekran, sade ve rol bazlı yönlendirmeli olarak çalışır.
  */
 export function AuthPage({
-  currentUser,
-  onSelectSession,
-  onDataChanged,
+  onAuthenticated,
+  onContinueAsVisitor,
 }: AuthPageProps) {
   const showToast = useToast();
 
-  const [activeTab, setActiveTab] = useState('register');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
   const [registerRole, setRegisterRole] = useState<'AGENT' | 'CUSTOMER'>('AGENT');
+
+  // Giriş alanları
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Ortak kayıt alanları
   const [firstName, setFirstName] = useState('');
@@ -65,7 +63,7 @@ export function AuthPage({
   const [password, setPassword] = useState('');
   const [phone, setPhone] = useState('');
 
-  // Emlakçıya özel alanlar
+  // Emlakçıya özel kayıt alanları
   const [ttbsDocumentNo, setTtbsDocumentNo] = useState('');
   const [agencyName, setAgencyName] = useState('');
   const [officePhone, setOfficePhone] = useState('');
@@ -75,17 +73,10 @@ export function AuthPage({
   const [addressDetail, setAddressDetail] = useState('');
   const [uploadedLogoUrl, setUploadedLogoUrl] = useState<string | null>(null);
 
-  // TTBS doğrulama durumu
   const [ttbsResult, setTtbsResult] = useState<TTBSVerifyResult | null>(null);
   const [isVerifyingTtbs, setIsVerifyingTtbs] = useState(false);
-
-  // Giriş alanları
-  const [loginEmail, setLoginEmail] = useState('selim@baskentvizyon.com.tr');
-  const [loginPassword, setLoginPassword] = useState('123456');
-
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registeredUsers, setRegisteredUsers] = useState<UserSession[]>([]);
 
   const clearError = (key: string) => {
     setFieldErrors((prev) => {
@@ -96,21 +87,8 @@ export function AuthPage({
     });
   };
 
-  const loadUsers = async () => {
-    try {
-      const res = await fetchRegisteredUsers();
-      setRegisteredUsers(res.users);
-    } catch {
-      // ignore offline
-    }
-  };
-
-  useEffect(() => {
-    void loadUsers();
-  }, []);
-
-  const handleVerifyTtbs = async (overrideNo?: string) => {
-    const cleaned = formatDigitsOnly(overrideNo ?? ttbsDocumentNo, 7);
+  const handleVerifyTtbs = async () => {
+    const cleaned = formatDigitsOnly(ttbsDocumentNo, 7);
     if (cleaned.length !== 7) {
       const err = 'Yetki Belgesi numarası 7 haneli sayısal olmalıdır (Örn: 0609412).';
       setFieldErrors((prev) => ({ ...prev, ttbs_document_no: err }));
@@ -133,6 +111,38 @@ export function AuthPage({
       showToast({ body: 'Belge doğrulama servisine ulaşılamadı.', type: 'error' });
     } finally {
       setIsVerifyingTtbs(false);
+    }
+  };
+
+  const performLogin = async (emailVal: string, passwordVal: string) => {
+    const parsed = loginSchema.safeParse({
+      login_email: emailVal,
+      login_password: passwordVal,
+    });
+    if (!parsed.success) {
+      setFieldErrors(zodErrorsToMap(parsed.error));
+      showToast({
+        body: 'E-posta ve şifre alanlarını kontrol ediniz.',
+        type: 'error',
+      });
+      return;
+    }
+
+    setFieldErrors({});
+    setIsSubmitting(true);
+    try {
+      const res = await loginAccount(emailVal, passwordVal);
+      showToast({ body: res.message, type: 'info' });
+      onAuthenticated(res.user);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setFieldErrors(err.fieldErrors);
+        showToast({ body: err.message, type: 'error' });
+      } else {
+        showToast({ body: 'Sunucuya bağlanılamadı.', type: 'error' });
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -184,10 +194,8 @@ export function AuthPage({
         role: registerRole,
         logo_url: registerRole === 'AGENT' ? uploadedLogoUrl : null,
       });
-      onSelectSession(res.user);
       showToast({ body: res.message, type: 'info' });
-      await loadUsers();
-      onDataChanged();
+      onAuthenticated(res.user);
     } catch (err) {
       if (err instanceof ApiError) {
         setFieldErrors(err.fieldErrors);
@@ -199,483 +207,426 @@ export function AuthPage({
       setIsSubmitting(false);
     }
   };
-
-  const handleLogin = async () => {
-    const parsed = loginSchema.safeParse({
-      login_email: loginEmail,
-      login_password: loginPassword,
-    });
-    if (!parsed.success) {
-      setFieldErrors(zodErrorsToMap(parsed.error));
-      showToast({ body: 'E-posta ve şifre alanlarını kontrol ediniz.', type: 'error' });
-      return;
-    }
-
-    setFieldErrors({});
-    setIsSubmitting(true);
-    try {
-      const res = await loginAccount(loginEmail, loginPassword);
-      onSelectSession(res.user);
-      showToast({ body: res.message, type: 'info' });
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setFieldErrors(err.fieldErrors);
-        showToast({ body: err.message, type: 'error' });
-      } else {
-        showToast({ body: 'Sunucuya bağlanılamadı.', type: 'error' });
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const userColumns: TableColumn<UserSession>[] = [
-    {
-      key: 'full_name',
-      header: 'Kullanıcı',
-      renderCell: (u) => (
-        <HStack gap={1.5} vAlign="center">
-          <Avatar
-            name={u.full_name}
-            src={u.agency?.logo_url ?? undefined}
-            size="sm"
-          />
-          <VStack gap={0}>
-            <Text weight="semibold">{u.full_name}</Text>
-            <Text color="secondary" size="sm">
-              {u.email}
-            </Text>
-          </VStack>
-        </HStack>
-      ),
-    },
-    {
-      key: 'role',
-      header: 'Hesap Türü',
-      renderCell: (u) => (
-        <Text>{u.role === 'AGENT' ? 'Emlakçı' : 'Müşteri'}</Text>
-      ),
-    },
-    {
-      key: 'agency',
-      header: 'İşletme',
-      renderCell: (u) => (
-        <Text color="secondary">{u.agency ? u.agency.name : 'Bireysel'}</Text>
-      ),
-    },
-    {
-      key: 'id',
-      header: 'Oturum',
-      renderCell: (u) => (
-        <Button
-          label={currentUser.id === u.id ? 'Aktif' : 'Geçiş Yap'}
-          variant={currentUser.id === u.id ? 'secondary' : 'primary'}
-          size="sm"
-          isDisabled={currentUser.id === u.id}
-          onClick={() => {
-            onSelectSession(u);
-            showToast({ body: `Oturum değiştirildi: ${u.full_name}`, type: 'info' });
-          }}
-        />
-      ),
-    },
-  ];
 
   return (
-    <PageFrame
-      title="Hesap ve Oturum Yönetimi"
-      subtitle="Emlakçı veya bireysel müşteri olarak kayıt olabilir, mevcut hesapla giriş yapabilirsiniz."
-      action={
-        <Button
-          label="Ziyaretçi Olarak Devam Et"
-          variant="secondary"
-          size="sm"
-          onClick={() => {
-            onSelectSession(VISITOR_SESSION);
-            showToast({ body: 'Ziyaretçi moduna geçildi.', type: 'info' });
-          }}
+    <AppShell
+      contentPadding={0}
+      variant="surface"
+      topNav={
+        <TopNav
+          heading={<Text weight="bold">GİB e-Emlak</Text>}
+          endContent={
+            <Button
+              label="Giriş Yapmadan İlanlara Göz At"
+              variant="secondary"
+              size="sm"
+              onClick={onContinueAsVisitor}
+            />
+          }
         />
       }
     >
-      <VStack gap={4}>
-        <TabList
-          value={activeTab}
-          onChange={(val) => {
-            setActiveTab(val);
-            setFieldErrors({});
-          }}
-          hasDivider
-        >
-          <Tab value="register" label="Yeni Kayıt Ol" />
-          <Tab value="login" label="Giriş Yap" />
-        </TabList>
+      <Layout
+        contentWidth={activeTab === 'login' ? 520 : 920}
+        padding={4}
+        content={
+          <LayoutContent>
+            <VStack gap={5}>
+              <VStack gap={1}>
+                <Heading level={1}>GİB e-Emlak Platformuna Hoş Geldiniz</Heading>
+                <Text color="secondary">
+                  Emlak işletmesi paneline veya bireysel müşteri portalına
+                  erişmek için giriş yapın ya da yeni hesap oluşturun.
+                </Text>
+              </VStack>
 
-          {activeTab === 'register' ? (
-            <VStack gap={4}>
-              <HStack gap={1.5} wrap="wrap">
-                <Button
-                  label="Emlakçı Kaydı"
-                  variant={registerRole === 'AGENT' ? 'primary' : 'secondary'}
-                  onClick={() => {
-                    setRegisterRole('AGENT');
-                    setFieldErrors({});
-                  }}
-                />
-                <Button
-                  label="Müşteri Kaydı"
-                  variant={registerRole === 'CUSTOMER' ? 'primary' : 'secondary'}
-                  onClick={() => {
-                    setRegisterRole('CUSTOMER');
-                    setFieldErrors({});
-                  }}
-                />
-              </HStack>
+              <TabList
+                value={activeTab}
+                onChange={(val) => {
+                  setActiveTab(val as 'login' | 'register');
+                  setFieldErrors({});
+                }}
+                hasDivider
+              >
+                <Tab value="login" label="Giriş Yap" />
+                <Tab value="register" label="Yeni Kayıt Ol" />
+              </TabList>
 
-              <Grid columns={{ minWidth: 260, max: 2 }} gap={4}>
-                <Card padding={3}>
-                  <VStack gap={3}>
-                    <Heading level={3}>Kişisel Bilgiler</Heading>
-                    <Divider />
-
-                    <Grid columns={{ minWidth: 140, max: 2 }} gap={2}>
-                      <TextInput
-                        label="Ad *"
-                        placeholder="Örn: Kemal"
-                        value={firstName}
-                        onChange={(val) => {
-                          setFirstName(sanitizeNameInput(val));
-                          clearError('first_name');
-                        }}
-                        status={
-                          fieldErrors.first_name
-                            ? { type: 'error', message: fieldErrors.first_name }
-                            : undefined
-                        }
-                        width="100%"
-                      />
-                      <TextInput
-                        label="Soyad *"
-                        placeholder="Örn: Soylu"
-                        value={lastName}
-                        onChange={(val) => {
-                          setLastName(sanitizeNameInput(val));
-                          clearError('last_name');
-                        }}
-                        status={
-                          fieldErrors.last_name
-                            ? { type: 'error', message: fieldErrors.last_name }
-                            : undefined
-                        }
-                        width="100%"
-                      />
-                    </Grid>
-
-                    <TextInput
-                      type="email"
-                      label="E-Posta Adresi *"
-                      placeholder="ornek@eposta.com"
-                      value={email}
-                      onChange={(val) => {
-                        setEmail(val);
-                        clearError('email');
-                      }}
-                      status={
-                        fieldErrors.email
-                          ? { type: 'error', message: fieldErrors.email }
-                          : undefined
-                      }
-                      width="100%"
-                    />
-
-                    <TextInput
-                      type="password"
-                      label="Şifre *"
-                      description="En az 8 karakter; harf, rakam ve sembol (!@#.) içermelidir."
-                      placeholder="Güçlü şifre oluşturun"
-                      value={password}
-                      onChange={(val) => {
-                        setPassword(val);
-                        clearError('password');
-                      }}
-                      status={
-                        fieldErrors.password
-                          ? { type: 'error', message: fieldErrors.password }
-                          : undefined
-                      }
-                      width="100%"
-                    />
-
-                    <TextInput
-                      type="tel"
-                      inputMode="tel"
-                      label="Cep Telefonu *"
-                      placeholder="0 (532) 123 45 67"
-                      value={phone}
-                      onChange={(val) => {
-                        setPhone(formatTurkishPhone(val));
-                        clearError('phone');
-                      }}
-                      status={
-                        fieldErrors.phone
-                          ? { type: 'error', message: fieldErrors.phone }
-                          : undefined
-                      }
-                      width="100%"
-                    />
-                  </VStack>
-                </Card>
-
-                {registerRole === 'AGENT' ? (
-                  <Card padding={3}>
+              {activeTab === 'login' ? (
+                <VStack gap={4}>
+                  <Card padding={4}>
                     <VStack gap={3}>
-                      <Heading level={3}>Emlak Ofisi Bilgileri</Heading>
-                      <Divider />
-
-                      <VStack gap={1.5}>
-                        <TextInput
-                          inputMode="numeric"
-                          label="Taşınmaz Ticareti Yetki Belge No *"
-                          description="Ticaret Bakanlığı 7 haneli il kodlu belge numarası (Örn: 0609412)."
-                          placeholder="0609412"
-                          value={ttbsDocumentNo}
-                          onChange={(val) => {
-                            setTtbsDocumentNo(formatDigitsOnly(val, 7));
-                            setTtbsResult(null);
-                            clearError('ttbs_document_no');
-                          }}
-                          status={
-                            fieldErrors.ttbs_document_no
-                              ? {
-                                  type: 'error',
-                                  message: fieldErrors.ttbs_document_no,
-                                }
-                              : ttbsResult
-                                ? {
-                                    type: ttbsResult.is_valid
-                                      ? 'success'
-                                      : 'error',
-                                    message: ttbsResult.message,
-                                  }
-                                : undefined
-                          }
-                          width="100%"
-                        />
-                        <HStack>
-                          <Button
-                            label="Belgeyi Doğrula"
-                            variant="secondary"
-                            size="sm"
-                            isLoading={isVerifyingTtbs}
-                            onClick={() => void handleVerifyTtbs()}
-                          />
-                        </HStack>
-                      </VStack>
-
                       <TextInput
-                        label="Emlak Ofisi İsmi *"
-                        placeholder="Örn: Ankara Emlak Merkezi"
-                        value={agencyName}
+                        type="email"
+                        label="E-Posta Adresi *"
+                        placeholder="ornek@eposta.com"
+                        value={loginEmail}
                         onChange={(val) => {
-                          setAgencyName(val);
-                          clearError('agency_name');
+                          setLoginEmail(val);
+                          clearError('login_email');
                         }}
                         status={
-                          fieldErrors.agency_name
-                            ? { type: 'error', message: fieldErrors.agency_name }
+                          fieldErrors.login_email
+                            ? { type: 'error', message: fieldErrors.login_email }
                             : undefined
                         }
                         width="100%"
                       />
-
                       <TextInput
-                        type="tel"
-                        inputMode="tel"
-                        label="Ofis Sabit Telefonu *"
-                        placeholder="0 (312) 419 88 99"
-                        value={officePhone}
+                        type="password"
+                        label="Şifre *"
+                        placeholder="Şifreniz"
+                        value={loginPassword}
                         onChange={(val) => {
-                          setOfficePhone(formatTurkishPhone(val));
-                          clearError('office_phone');
+                          setLoginPassword(val);
+                          clearError('login_password');
                         }}
+                        onEnter={() => void performLogin(loginEmail, loginPassword)}
                         status={
-                          fieldErrors.office_phone
-                            ? { type: 'error', message: fieldErrors.office_phone }
-                            : undefined
-                        }
-                        width="100%"
-                      />
-
-                      <LocationPicker
-                        city={city}
-                        district={district}
-                        neighborhood={neighborhood}
-                        onChange={(next) => {
-                          setCity(next.city);
-                          setDistrict(next.district);
-                          setNeighborhood(next.neighborhood);
-                          clearError('city');
-                          clearError('district');
-                          clearError('neighborhood');
-                        }}
-                        errors={{
-                          city: fieldErrors.city,
-                          district: fieldErrors.district,
-                          neighborhood: fieldErrors.neighborhood,
-                        }}
-                      />
-
-                      <TextInput
-                        label="Açık Adres *"
-                        placeholder="Cadde, sokak ve kapı numarası"
-                        value={addressDetail}
-                        onChange={(val) => {
-                          setAddressDetail(val);
-                          clearError('address_detail');
-                        }}
-                        status={
-                          fieldErrors.address_detail
+                          fieldErrors.login_password
                             ? {
                                 type: 'error',
-                                message: fieldErrors.address_detail,
+                                message: fieldErrors.login_password,
                               }
                             : undefined
                         }
                         width="100%"
                       />
+                      <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
+                        <Text color="secondary" size="sm">
+                          * işaretli alanlar zorunludur.
+                        </Text>
+                        <Button
+                          label="Giriş Yap"
+                          variant="primary"
+                          isLoading={isSubmitting}
+                          onClick={() => void performLogin(loginEmail, loginPassword)}
+                        />
+                      </HStack>
+                    </VStack>
+                  </Card>
 
-                      <LogoUploader
-                        currentLogoUrl={uploadedLogoUrl}
-                        onUploaded={(url) => setUploadedLogoUrl(url)}
+                  <VStack gap={2}>
+                    <Text color="secondary" size="sm" weight="medium">
+                      Hızlı Demo Girişi
+                    </Text>
+                    <Grid columns={{ minWidth: 200, max: 3 }} gap={2}>
+                      <Button
+                        label="Emlakçı (Ankara)"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={isSubmitting}
+                        onClick={() =>
+                          void performLogin('selim@baskentvizyon.com.tr', '123456')
+                        }
                       />
-                    </VStack>
-                  </Card>
-                ) : (
-                  <Card padding={3}>
-                    <VStack gap={2}>
-                      <Heading level={3}>Bireysel Üyelik</Heading>
-                      <Divider />
-                      <Text color="secondary">
-                        Kayıt olduktan sonra tüm ilanları filtreleyebilir,
-                        doğal dille akıllı arama yapabilir, favori listenizi
-                        oluşturabilir ve emlakçılardan fiziki veya telefon
-                        randevusu alabilirsiniz.
-                      </Text>
-                    </VStack>
-                  </Card>
-                )}
-              </Grid>
+                      <Button
+                        label="Emlakçı (İstanbul)"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={isSubmitting}
+                        onClick={() =>
+                          void performLogin('ayse@bogaziciprestij.com.tr', '123456')
+                        }
+                      />
+                      <Button
+                        label="Müşteri (Zeynep Kaya)"
+                        variant="secondary"
+                        size="sm"
+                        isLoading={isSubmitting}
+                        onClick={() =>
+                          void performLogin('zeynep.kaya@ornekmail.com', '123456')
+                        }
+                      />
+                    </Grid>
+                  </VStack>
+                </VStack>
+              ) : (
+                <VStack gap={4}>
+                  <HStack gap={1.5} wrap="wrap">
+                    <Button
+                      label="Emlakçı Kaydı"
+                      variant={registerRole === 'AGENT' ? 'primary' : 'secondary'}
+                      onClick={() => {
+                        setRegisterRole('AGENT');
+                        setFieldErrors({});
+                      }}
+                    />
+                    <Button
+                      label="Müşteri Kaydı"
+                      variant={
+                        registerRole === 'CUSTOMER' ? 'primary' : 'secondary'
+                      }
+                      onClick={() => {
+                        setRegisterRole('CUSTOMER');
+                        setFieldErrors({});
+                      }}
+                    />
+                  </HStack>
 
-              <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
-                <Text color="secondary" size="sm">
-                  * işaretli alanlar zorunludur.
-                </Text>
-                <Button
-                  label="Kaydı Tamamla"
-                  variant="primary"
-                  isLoading={isSubmitting}
-                  onClick={() => void handleRegister()}
-                />
-              </HStack>
-            </VStack>
-          ) : (
-            <Grid columns={{ minWidth: 260, max: 2 }} gap={4}>
-              <Card padding={3}>
-                <VStack gap={3}>
-                  <Heading level={3}>Hesap Girişi</Heading>
-                  <Divider />
-                  <TextInput
-                    type="email"
-                    label="E-Posta *"
-                    value={loginEmail}
-                    onChange={(val) => {
-                      setLoginEmail(val);
-                      clearError('login_email');
-                    }}
-                    status={
-                      fieldErrors.login_email
-                        ? { type: 'error', message: fieldErrors.login_email }
-                        : undefined
-                    }
-                    width="100%"
-                  />
-                  <TextInput
-                    type="password"
-                    label="Şifre *"
-                    value={loginPassword}
-                    onChange={(val) => {
-                      setLoginPassword(val);
-                      clearError('login_password');
-                    }}
-                    status={
-                      fieldErrors.login_password
-                        ? { type: 'error', message: fieldErrors.login_password }
-                        : undefined
-                    }
-                    width="100%"
-                  />
+                  <Grid columns={{ minWidth: 280, max: 2 }} gap={4}>
+                    <Card padding={4}>
+                      <VStack gap={3}>
+                        <Heading level={3}>Kişisel Bilgiler</Heading>
+                        <Divider />
+
+                        <Grid columns={{ minWidth: 140, max: 2 }} gap={2}>
+                          <TextInput
+                            label="Ad *"
+                            placeholder="Örn: Kemal"
+                            value={firstName}
+                            onChange={(val) => {
+                              setFirstName(sanitizeNameInput(val));
+                              clearError('first_name');
+                            }}
+                            status={
+                              fieldErrors.first_name
+                                ? {
+                                    type: 'error',
+                                    message: fieldErrors.first_name,
+                                  }
+                                : undefined
+                            }
+                            width="100%"
+                          />
+                          <TextInput
+                            label="Soyad *"
+                            placeholder="Örn: Soylu"
+                            value={lastName}
+                            onChange={(val) => {
+                              setLastName(sanitizeNameInput(val));
+                              clearError('last_name');
+                            }}
+                            status={
+                              fieldErrors.last_name
+                                ? {
+                                    type: 'error',
+                                    message: fieldErrors.last_name,
+                                  }
+                                : undefined
+                            }
+                            width="100%"
+                          />
+                        </Grid>
+
+                        <TextInput
+                          type="email"
+                          label="E-Posta Adresi *"
+                          placeholder="ornek@eposta.com"
+                          value={email}
+                          onChange={(val) => {
+                            setEmail(val);
+                            clearError('email');
+                          }}
+                          status={
+                            fieldErrors.email
+                              ? { type: 'error', message: fieldErrors.email }
+                              : undefined
+                          }
+                          width="100%"
+                        />
+
+                        <TextInput
+                          type="password"
+                          label="Şifre *"
+                          description="En az 8 karakter; harf, rakam ve sembol (!@#.) içermelidir."
+                          placeholder="Güçlü şifre oluşturun"
+                          value={password}
+                          onChange={(val) => {
+                            setPassword(val);
+                            clearError('password');
+                          }}
+                          status={
+                            fieldErrors.password
+                              ? { type: 'error', message: fieldErrors.password }
+                              : undefined
+                          }
+                          width="100%"
+                        />
+
+                        <TextInput
+                          type="tel"
+                          inputMode="tel"
+                          label="Cep Telefonu *"
+                          placeholder="0 (532) 123 45 67"
+                          value={phone}
+                          onChange={(val) => {
+                            setPhone(formatTurkishPhone(val));
+                            clearError('phone');
+                          }}
+                          status={
+                            fieldErrors.phone
+                              ? { type: 'error', message: fieldErrors.phone }
+                              : undefined
+                          }
+                          width="100%"
+                        />
+                      </VStack>
+                    </Card>
+
+                    {registerRole === 'AGENT' ? (
+                      <Card padding={4}>
+                        <VStack gap={3}>
+                          <Heading level={3}>Emlak Ofisi Bilgileri</Heading>
+                          <Divider />
+
+                          <VStack gap={1.5}>
+                            <TextInput
+                              inputMode="numeric"
+                              label="Taşınmaz Ticareti Yetki Belge No *"
+                              description="Ticaret Bakanlığı 7 haneli il kodlu belge numarası (Örn: 0609412)."
+                              placeholder="0609412"
+                              value={ttbsDocumentNo}
+                              onChange={(val) => {
+                                setTtbsDocumentNo(formatDigitsOnly(val, 7));
+                                setTtbsResult(null);
+                                clearError('ttbs_document_no');
+                              }}
+                              status={
+                                fieldErrors.ttbs_document_no
+                                  ? {
+                                      type: 'error',
+                                      message: fieldErrors.ttbs_document_no,
+                                    }
+                                  : ttbsResult
+                                    ? {
+                                        type: ttbsResult.is_valid
+                                          ? 'success'
+                                          : 'error',
+                                        message: ttbsResult.message,
+                                      }
+                                    : undefined
+                              }
+                              width="100%"
+                            />
+                            <HStack>
+                              <Button
+                                label="Belgeyi Doğrula"
+                                variant="secondary"
+                                size="sm"
+                                isLoading={isVerifyingTtbs}
+                                onClick={() => void handleVerifyTtbs()}
+                              />
+                            </HStack>
+                          </VStack>
+
+                          <TextInput
+                            label="Emlak Ofisi İsmi *"
+                            placeholder="Örn: Ankara Emlak Merkezi"
+                            value={agencyName}
+                            onChange={(val) => {
+                              setAgencyName(val);
+                              clearError('agency_name');
+                            }}
+                            status={
+                              fieldErrors.agency_name
+                                ? {
+                                    type: 'error',
+                                    message: fieldErrors.agency_name,
+                                  }
+                                : undefined
+                            }
+                            width="100%"
+                          />
+
+                          <TextInput
+                            type="tel"
+                            inputMode="tel"
+                            label="Ofis Sabit Telefonu *"
+                            placeholder="0 (312) 419 88 99"
+                            value={officePhone}
+                            onChange={(val) => {
+                              setOfficePhone(formatTurkishPhone(val));
+                              clearError('office_phone');
+                            }}
+                            status={
+                              fieldErrors.office_phone
+                                ? {
+                                    type: 'error',
+                                    message: fieldErrors.office_phone,
+                                  }
+                                : undefined
+                            }
+                            width="100%"
+                          />
+
+                          <LocationPicker
+                            city={city}
+                            district={district}
+                            neighborhood={neighborhood}
+                            onChange={(next) => {
+                              setCity(next.city);
+                              setDistrict(next.district);
+                              setNeighborhood(next.neighborhood);
+                              clearError('city');
+                              clearError('district');
+                              clearError('neighborhood');
+                            }}
+                            errors={{
+                              city: fieldErrors.city,
+                              district: fieldErrors.district,
+                              neighborhood: fieldErrors.neighborhood,
+                            }}
+                          />
+
+                          <TextInput
+                            label="Açık Adres *"
+                            placeholder="Cadde, sokak ve kapı numarası"
+                            value={addressDetail}
+                            onChange={(val) => {
+                              setAddressDetail(val);
+                              clearError('address_detail');
+                            }}
+                            status={
+                              fieldErrors.address_detail
+                                ? {
+                                    type: 'error',
+                                    message: fieldErrors.address_detail,
+                                  }
+                                : undefined
+                            }
+                            width="100%"
+                          />
+
+                          <LogoUploader
+                            currentLogoUrl={uploadedLogoUrl}
+                            onUploaded={(url) => setUploadedLogoUrl(url)}
+                          />
+                        </VStack>
+                      </Card>
+                    ) : (
+                      <Card padding={4}>
+                        <VStack gap={2}>
+                          <Heading level={3}>Bireysel Üyelik</Heading>
+                          <Divider />
+                          <Text color="secondary">
+                            Kayıt olduktan sonra tüm ilanları filtreleyebilir,
+                            doğal dille akıllı arama yapabilir, favori listenizi
+                            oluşturabilir ve emlakçılardan fiziki veya telefon
+                            randevusu alabilirsiniz.
+                          </Text>
+                        </VStack>
+                      </Card>
+                    )}
+                  </Grid>
+
                   <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
                     <Text color="secondary" size="sm">
                       * işaretli alanlar zorunludur.
                     </Text>
                     <Button
-                      label="Giriş Yap"
+                      label="Kaydı Tamamla"
                       variant="primary"
                       isLoading={isSubmitting}
-                      onClick={() => void handleLogin()}
+                      onClick={() => void handleRegister()}
                     />
                   </HStack>
                 </VStack>
-              </Card>
-
-              <Card padding={3}>
-                <VStack gap={2}>
-                  <Heading level={3}>Demo Hesapları</Heading>
-                  <Divider />
-                  <Button
-                    label="Emlakçı: Selim Karahan (Ankara)"
-                    variant="secondary"
-                    onClick={() => {
-                      setLoginEmail('selim@baskentvizyon.com.tr');
-                      setLoginPassword('123456');
-                      setFieldErrors({});
-                    }}
-                  />
-                  <Button
-                    label="Emlakçı: Ayşe Demirci (İstanbul)"
-                    variant="secondary"
-                    onClick={() => {
-                      setLoginEmail('ayse@bogaziciprestij.com.tr');
-                      setLoginPassword('123456');
-                      setFieldErrors({});
-                    }}
-                  />
-                  <Button
-                    label="Müşteri: Zeynep Kaya"
-                    variant="secondary"
-                    onClick={() => {
-                      setLoginEmail('zeynep.kaya@ornekmail.com');
-                      setLoginPassword('123456');
-                      setFieldErrors({});
-                    }}
-                  />
-                </VStack>
-              </Card>
-            </Grid>
-          )}
-      </VStack>
-
-      <VStack gap={3}>
-        <Heading level={3}>Kayıtlı Hesaplar</Heading>
-        <Divider />
-        <HStack isScrollable width="100%">
-          <Table
-            data={registeredUsers}
-            columns={userColumns}
-            idKey="id"
-            hasHover
-          />
-        </HStack>
-      </VStack>
-    </PageFrame>
+              )}
+            </VStack>
+          </LayoutContent>
+        }
+      />
+    </AppShell>
   );
 }

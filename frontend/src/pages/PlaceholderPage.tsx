@@ -12,7 +12,7 @@ interface PlaceholderPageProps {
 }
 
 /**
- * Sıradaki geliştirme parçalarında aktif edilecek modüller için sade bilgi sayfası.
+ * Henüz geliştirilmemiş modüller (P10-P11) için sade bilgi sayfası.
  */
 export function PlaceholderPage({
   title,
@@ -23,21 +23,14 @@ export function PlaceholderPage({
     <PageFrame title={title} subtitle={description}>
       <VStack gap={3}>
         <Text color="secondary">
-          Bu modül bir sonraki geliştirme adımında eklenecektir. Şu an İşyeri
-          Tanımı ve Hesap/Kayıt ekranlarını kullanabilirsiniz.
+          Bu modül sıradaki geliştirme adımında eklenecektir.
         </Text>
         <HStack gap={1.5} wrap="wrap">
           <Button
-            label="İşyeri Tanımına Git"
+            label="Ana Sayfaya Dön"
             variant="primary"
             size="sm"
             onClick={() => onNavigate('agency')}
-          />
-          <Button
-            label="Giriş / Kayıt Ekranı"
-            variant="secondary"
-            size="sm"
-            onClick={() => onNavigate('auth')}
           />
         </HStack>
       </VStack>

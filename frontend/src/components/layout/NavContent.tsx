@@ -1,18 +1,20 @@
 import { SideNavItem, SideNavSection } from '@astryxdesign/core/SideNav';
-import type { NavDestination } from '../../types';
+import type { NavDestination, UserSession } from '../../types';
 
 interface NavContentProps {
+  role: UserSession['role'];
   selectedNav: NavDestination;
   onNavigate: (dest: NavDestination) => void;
 }
 
 /**
- * Masaüstü SideNav ve mobil MobileNav çekmecesi tarafından paylaşılan sade menü.
+ * Kullanıcının rolüne (AGENT / CUSTOMER / VISITOR) göre tamamen ayrışmış yan menü.
+ * Her rol yalnızca kendi yetkili olduğu ekranları görür.
  */
-export function NavContent({ selectedNav, onNavigate }: NavContentProps) {
-  return (
-    <>
-      <SideNavSection title="İşletme Yönetimi">
+export function NavContent({ role, selectedNav, onNavigate }: NavContentProps) {
+  if (role === 'AGENT') {
+    return (
+      <SideNavSection title="Emlak İşletmesi">
         <SideNavItem
           label="İşyeri Tanımı"
           isSelected={selectedNav === 'agency'}
@@ -49,8 +51,12 @@ export function NavContent({ selectedNav, onNavigate }: NavContentProps) {
           onClick={() => onNavigate('reports')}
         />
       </SideNavSection>
+    );
+  }
 
-      <SideNavSection title="Müşteri Vitrini">
+  if (role === 'CUSTOMER') {
+    return (
+      <SideNavSection title="Müşteri Portalı">
         <SideNavItem
           label="İlan Vitrini"
           isSelected={selectedNav === 'marketplace'}
@@ -61,20 +67,33 @@ export function NavContent({ selectedNav, onNavigate }: NavContentProps) {
           isSelected={selectedNav === 'sell-request'}
           onClick={() => onNavigate('sell-request')}
         />
+        <SideNavItem
+          label="Randevularım"
+          isSelected={selectedNav === 'calendar'}
+          onClick={() => onNavigate('calendar')}
+        />
+        <SideNavItem
+          label="AI Akıllı Arama"
+          isSelected={selectedNav === 'ai-match'}
+          onClick={() => onNavigate('ai-match')}
+        />
       </SideNavSection>
+    );
+  }
 
-      <SideNavSection title="Hesap">
-        <SideNavItem
-          label="Giriş / Kayıt"
-          isSelected={selectedNav === 'auth'}
-          onClick={() => onNavigate('auth')}
-        />
-        <SideNavItem
-          label="Sistem Özeti"
-          isSelected={selectedNav === 'system'}
-          onClick={() => onNavigate('system')}
-        />
-      </SideNavSection>
-    </>
+  // VISITOR (Girişsiz mod — BR-08)
+  return (
+    <SideNavSection title="Keşfet">
+      <SideNavItem
+        label="İlan Vitrini"
+        isSelected={selectedNav === 'marketplace'}
+        onClick={() => onNavigate('marketplace')}
+      />
+      <SideNavItem
+        label="Emlak Ofisleri"
+        isSelected={selectedNav === 'sell-request'}
+        onClick={() => onNavigate('sell-request')}
+      />
+    </SideNavSection>
   );
 }
