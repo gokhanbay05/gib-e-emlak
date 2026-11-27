@@ -1,12 +1,12 @@
 .modal-overlay {
   position: fixed;
-  top: -80px;
+  top: 0;
   left: 0;
   right: 0;
-  bottom: -160px;
-  padding: 100px 20px 180px;
+  bottom: 0;
+  padding: 16px;
   z-index: 1100;
-  background-color: rgba(15, 23, 42, 0.86);
+  background-color: rgba(15, 23, 42, 0.78);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -67,7 +67,7 @@
 
 @media (max-width: 640px) {
   .modal-overlay {
-    padding: 90px 10px 170px;
+    padding: 10px;
   }
   .modal-content {
     max-height: calc(100dvh - 20px);

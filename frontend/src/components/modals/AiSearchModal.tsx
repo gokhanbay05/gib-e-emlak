@@ -8,7 +8,7 @@ import {
 import type { PropertyRecord } from '../../types';
 import { formatPriceTL, getPropertyGallery } from '../../lib/utils';
 import { Badge, Button, Card } from '../core';
-import { useBodyScrollLock } from '../core/Modal';
+import { useBodyScrollLock, useVisualViewport } from '../core/Modal';
 import '../../css/modals/AiSearchModal.css';
 
 export interface AiSearchModalProps {
@@ -34,6 +34,7 @@ export function AiSearchModal({
   onSelectProperty,
 }: AiSearchModalProps) {
   useBodyScrollLock(isOpen);
+  const vvBox = useVisualViewport(isOpen);
   const [prompt, setPrompt] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,26 +61,16 @@ export function AiSearchModal({
       {isOpen && (
         <motion.div
           key="ai-radial-overlay"
-          initial={{
-            clipPath: 'circle(0% at 92% 92%)',
-            opacity: 0.7,
-          }}
-          animate={{
-            clipPath: 'circle(150% at 92% 92%)',
-            opacity: 1,
-          }}
-          exit={{
-            clipPath: 'circle(0% at 92% 92%)',
-            opacity: 0,
-          }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.98 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
           style={{
             position: 'fixed',
-            top: 0,
+            top: vvBox ? `${vvBox.top}px` : 0,
             left: 0,
             right: 0,
-            bottom: '-140px',
-            paddingBottom: '140px',
+            height: vvBox ? `${vvBox.height}px` : '100dvh',
             zIndex: 1300,
             backgroundColor: 'var(--color-bg-surface)',
             display: 'flex',

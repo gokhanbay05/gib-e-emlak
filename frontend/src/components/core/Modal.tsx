@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import Button from './Button';
@@ -16,39 +16,50 @@ export interface ModalProps {
   className?: string;
 }
 
+/**
+ * iOS Safari klavye açıldığında body position:fixed kullanmadan (hit-test koordinat
+ * kaymasına yol açmadan) scroll kilidi ve visualViewport senkronizasyonu sağlar.
+ */
 export function useBodyScrollLock(locked: boolean) {
   useEffect(() => {
     if (!locked) return;
-    const scrollY = window.scrollY;
-    const prevBodyStyle = {
-      position: document.body.style.position,
-      top: document.body.style.top,
-      left: document.body.style.left,
-      right: document.body.style.right,
-      width: document.body.style.width,
-      overflow: document.body.style.overflow,
-    };
     const prevHtmlOverflow = document.documentElement.style.overflow;
-
+    const prevBodyOverflow = document.body.style.overflow;
     document.documentElement.style.overflow = 'hidden';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.width = '100%';
     document.body.style.overflow = 'hidden';
 
     return () => {
       document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.position = prevBodyStyle.position;
-      document.body.style.top = prevBodyStyle.top;
-      document.body.style.left = prevBodyStyle.left;
-      document.body.style.right = prevBodyStyle.right;
-      document.body.style.width = prevBodyStyle.width;
-      document.body.style.overflow = prevBodyStyle.overflow;
-      window.scrollTo(0, scrollY);
+      document.body.style.overflow = prevBodyOverflow;
     };
   }, [locked]);
+}
+
+export function useVisualViewport(active: boolean) {
+  const [box, setBox] = useState<{ top: number; height: number } | null>(null);
+
+  useEffect(() => {
+    if (!active || typeof window === 'undefined' || !window.visualViewport) {
+      setBox(null);
+      return;
+    }
+    const vv = window.visualViewport;
+    const sync = () => {
+      setBox({
+        top: Math.max(0, Math.round(vv.offsetTop)),
+        height: Math.round(vv.height),
+      });
+    };
+    sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
+    return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
+    };
+  }, [active]);
+
+  return box;
 }
 
 export function Modal({
@@ -61,6 +72,7 @@ export function Modal({
   className,
 }: ModalProps) {
   useBodyScrollLock(isOpen);
+  const vvBox = useVisualViewport(isOpen);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,10 +93,29 @@ export function Modal({
         'modal-overlay',
         size === 'fullscreen' && 'modal-overlay-fullscreen',
       )}
+      style={
+        vvBox
+          ? {
+              top: `${vvBox.top}px`,
+              height: `${vvBox.height}px`,
+              bottom: 'auto',
+            }
+          : undefined
+      }
       onClick={onClose}
     >
       <div
         className={cn('modal-content', `modal-${size}`, className)}
+        style={
+          vvBox
+            ? {
+                maxHeight:
+                  size === 'fullscreen'
+                    ? `${vvBox.height}px`
+                    : `${Math.max(240, vvBox.height - 20)}px`,
+              }
+            : undefined
+        }
         onClick={(e) => e.stopPropagation()}
       >
         {title !== undefined && (
