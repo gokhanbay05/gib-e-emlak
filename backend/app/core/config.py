@@ -10,6 +10,17 @@ class Settings(BaseSettings):
     database_url: str = (
         "postgresql+psycopg://gib_user:gib_password@localhost:5432/gib_emlak_db"
     )
+    cors_origins: str = ""
+
+    @property
+    def cors_origins_list(self) -> list[str]:
+        base = ["http://localhost:5173", "http://127.0.0.1:5173"]
+        extra = [
+            origin.strip()
+            for origin in self.cors_origins.split(",")
+            if origin.strip()
+        ]
+        return list(dict.fromkeys([*base, *extra]))
 
     model_config = SettingsConfigDict(
         env_file=".env",

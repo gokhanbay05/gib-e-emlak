@@ -31,6 +31,7 @@ pnpm-debug.log*
 # Environment Variables
 .env
 .env.local
+.env.prod
 .env.*.local
 backend/.env
 frontend/.env

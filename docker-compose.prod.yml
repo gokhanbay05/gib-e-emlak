@@ -1,0 +1,117 @@
+# Üretim (Home Server / NAS) Docker Compose Yapılandırması
+# Kullanım:
+#   1. cp .env.prod.example .env.prod  (içindeki şifreleri ve CLOUDFLARE_TUNNEL_TOKEN değerini doldur)
+#   2. docker compose --env-file .env.prod -f docker-compose.prod.yml up -d
+# Opsiyonel pgAdmin (yalnızca 127.0.0.1:5050):
+#   docker compose --env-file .env.prod -f docker-compose.prod.yml --profile tools up -d
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: gib_emlak_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gib_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD zorunludur}
+      POSTGRES_DB: ${POSTGRES_DB:-gib_emlak_db}
+    volumes:
+      - gib_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gib_user} -d ${POSTGRES_DB:-gib_emlak_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      - gib_emlak_net
+
+  backend:
+    image: ghcr.io/${GHCR_OWNER:-gokhanbay05}/gib-e-emlak-backend:${IMAGE_TAG:-latest}
+    container_name: gib_emlak_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gib_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-gib_emlak_db}
+      APP_ENV: production
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    volumes:
+      - gib_backend_uploads:/app/uploads
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - gib_emlak_net
+
+  frontend:
+    image: ghcr.io/${GHCR_OWNER:-gokhanbay05}/gib-e-emlak-frontend:${IMAGE_TAG:-latest}
+    container_name: gib_emlak_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    networks:
+      - gib_emlak_net
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: gib_emlak_cloudflared
+    restart: unless-stopped
+    depends_on:
+      frontend:
+        condition: service_healthy
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?CLOUDFLARE_TUNNEL_TOKEN zorunludur}
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      - gib_emlak_net
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: gib_emlak_watchtower
+    restart: unless-stopped
+    environment:
+      WATCHTOWER_LABEL_ENABLE: "true"
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_POLL_INTERVAL: ${WATCHTOWER_POLL_INTERVAL:-300}
+      TZ: Europe/Istanbul
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # GHCR paketleri Private ise NAS'ta 'docker login ghcr.io' yaptıktan sonra
+      # aşağıdaki satırın yorumunu kaldırarak kimlik dosyasını bağlayın:
+      # - ${DOCKER_CONFIG_JSON:-~/.docker/config.json}:/config.json:ro
+    networks:
+      - gib_emlak_net
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: gib_emlak_pgadmin
+    profiles: ["tools"]
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@gibemlak.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-degistir_guclu_sifre}
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    ports:
+      - "127.0.0.1:5050:80"
+    labels:
+      - "com.centurylinklabs.watchtower.enable=false"
+    networks:
+      - gib_emlak_net
+
+volumes:
+  gib_postgres_data:
+  gib_backend_uploads:
+
+networks:
+  gib_emlak_net:
+    driver: bridge
