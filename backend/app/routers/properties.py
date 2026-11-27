@@ -12,9 +12,8 @@ from app.core.validators import (
     normalize_tr_search,
     validate_tc_identity_no,
 )
-from app.models import Agency, Customer, CustomerSearchRequest, Property
+from app.models import Agency, Customer, Property
 from app.schemas.property import (
-    CustomerSearchRequestCreate,
     PropertyCreateRequest,
     PropertyStatusUpdateRequest,
     PropertyUpdateRequest,
@@ -324,33 +323,6 @@ def serialize_property(prop: Property, db: Session) -> dict:
     }
 
 
-def serialize_search_request(req: CustomerSearchRequest, db: Session) -> dict:
-    customer = req.customer or db.get(Customer, req.customer_id)
-    return {
-        "id": req.id,
-        "agency_id": req.agency_id,
-        "customer_id": req.customer_id,
-        "customer_name": (
-            f"{customer.first_name} {customer.last_name}".strip() if customer else ""
-        ),
-        "customer_type": customer.customer_type if customer else "",
-        "customer_phone": customer.mobile_phone if customer else "",
-        "listing_type": req.listing_type,
-        "property_type": req.property_type or "",
-        "min_sqm": req.min_sqm,
-        "max_sqm": req.max_sqm,
-        "room_count": req.room_count or "",
-        "floor_preference": req.floor_preference,
-        "heating_type": req.heating_type or "",
-        "min_price": float(req.min_price) if req.min_price is not None else None,
-        "max_price": float(req.max_price) if req.max_price is not None else None,
-        "city": req.city or "",
-        "district": req.district or "",
-        "natural_language_prompt": req.natural_language_prompt or "",
-        "created_at": req.created_at.isoformat() if req.created_at else "",
-    }
-
-
 def _validate_and_resolve_property(
     payload: PropertyCreateRequest | PropertyUpdateRequest,
     agency_id: int,
@@ -607,96 +579,6 @@ def list_properties(
     return {
         "properties": [serialize_property(p, db) for p in filtered],
         "counts": counts,
-    }
-
-
-@router.get("/search-requests")
-def list_search_requests(
-    agency_id: int | None = Query(default=None),
-    customer_id: int | None = Query(default=None),
-    db: Session = Depends(get_db),
-) -> dict:
-    stmt = select(CustomerSearchRequest).order_by(
-        CustomerSearchRequest.created_at.desc(),
-        CustomerSearchRequest.id.desc(),
-    )
-    if agency_id is not None:
-        stmt = stmt.where(CustomerSearchRequest.agency_id == agency_id)
-    if customer_id is not None:
-        stmt = stmt.where(CustomerSearchRequest.customer_id == customer_id)
-
-    requests = db.scalars(stmt).all()
-    return {
-        "search_requests": [serialize_search_request(r, db) for r in requests]
-    }
-
-
-@router.post("/search-requests", status_code=status.HTTP_201_CREATED)
-def create_search_request(
-    payload: CustomerSearchRequestCreate, db: Session = Depends(get_db)
-) -> dict:
-    customer = db.get(Customer, payload.customer_id)
-    if customer is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Talep kaydedilecek müşteri bulunamadı.",
-        )
-
-    listing_type = payload.listing_type.strip().upper()
-    if listing_type not in VALID_LISTING_TYPES:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Talep kaydı için işlem türü (Satılık veya Kiralık) seçilmelidir.",
-        )
-
-    prop_type = (
-        payload.property_type.strip().upper()
-        if payload.property_type and payload.property_type.strip().upper() in VALID_PROPERTY_TYPES
-        else None
-    )
-    room_cnt = (
-        payload.room_count.strip()
-        if payload.room_count and payload.room_count.strip() in VALID_ROOM_COUNTS
-        else None
-    )
-    heat_type = (
-        payload.heating_type.strip().upper()
-        if payload.heating_type and payload.heating_type.strip().upper() in VALID_HEATING_TYPES
-        else None
-    )
-
-    new_req = CustomerSearchRequest(
-        agency_id=payload.agency_id,
-        customer_id=customer.id,
-        listing_type=listing_type,
-        property_type=prop_type,
-        min_sqm=payload.min_sqm,
-        max_sqm=payload.max_sqm,
-        room_count=room_cnt,
-        floor_preference=payload.floor_preference,
-        heating_type=heat_type,
-        min_price=payload.min_price,
-        max_price=payload.max_price,
-        city=payload.city.strip() if payload.city and payload.city.strip() else None,
-        district=(
-            payload.district.strip()
-            if payload.district and payload.district.strip()
-            else None
-        ),
-        natural_language_prompt=(
-            payload.natural_language_prompt.strip()
-            if payload.natural_language_prompt
-            and payload.natural_language_prompt.strip()
-            else None
-        ),
-    )
-    db.add(new_req)
-    db.commit()
-    db.refresh(new_req)
-
-    return {
-        "message": f"{customer.first_name} {customer.last_name} için emlak arama talebi kaydedildi.",
-        "search_request": serialize_search_request(new_req, db),
     }
 
 

@@ -12,7 +12,7 @@ from app.core.validators import (
     turkish_sort_key,
     validate_tc_identity_no,
 )
-from app.models import Agency, Appointment, Customer, CustomerSearchRequest, Property
+from app.models import Agency, Appointment, Customer, Property
 from app.schemas.customer import CustomerCreateRequest, CustomerUpdateRequest
 
 router = APIRouter(prefix="/api/customers", tags=["Müşteri Tanımı (GİB Madde 2)"])
@@ -37,14 +37,6 @@ def serialize_customer(customer: Customer, db: Session) -> dict:
         )
         or 0
     )
-    search_request_count = (
-        db.scalar(
-            select(func.count())
-            .select_from(CustomerSearchRequest)
-            .where(CustomerSearchRequest.customer_id == customer.id)
-        )
-        or 0
-    )
 
     return {
         "id": customer.id,
@@ -62,7 +54,6 @@ def serialize_customer(customer: Customer, db: Session) -> dict:
         "notes": customer.notes or "",
         "property_count": int(property_count),
         "appointment_count": int(appointment_count),
-        "search_request_count": int(search_request_count),
         "created_at": customer.created_at.isoformat() if customer.created_at else "",
     }
 
@@ -344,36 +335,11 @@ def get_customer_detail(customer_id: int, db: Session = Depends(get_db)) -> dict
         for appt in appts
     ]
 
-    reqs = db.scalars(
-        select(CustomerSearchRequest)
-        .where(CustomerSearchRequest.customer_id == customer.id)
-        .order_by(CustomerSearchRequest.created_at.desc(), CustomerSearchRequest.id.desc())
-    ).all()
-
-    search_requests = [
-        {
-            "id": req.id,
-            "listing_type": req.listing_type,
-            "property_type": req.property_type,
-            "room_count": req.room_count,
-            "min_sqm": req.min_sqm,
-            "max_sqm": req.max_sqm,
-            "min_price": float(req.min_price) if req.min_price is not None else None,
-            "max_price": float(req.max_price) if req.max_price is not None else None,
-            "city": req.city,
-            "district": req.district,
-            "natural_language_prompt": req.natural_language_prompt,
-            "created_at": req.created_at.isoformat() if req.created_at else "",
-        }
-        for req in reqs
-    ]
-
     return {
         "customer": {
             **serialize_customer(customer, db),
             "owned_properties": owned_properties,
             "appointments": appointments,
-            "search_requests": search_requests,
         }
     }
 

@@ -91,7 +91,6 @@ export interface CustomerRecord {
   notes: string;
   property_count: number;
   appointment_count: number;
-  search_request_count: number;
   created_at: string;
 }
 
@@ -150,26 +149,9 @@ export interface CustomerAppointmentItem {
   meeting_notes: string;
 }
 
-export interface CustomerSearchRequestItem {
-  [key: string]: unknown;
-  id: number;
-  listing_type: string;
-  property_type: string | null;
-  room_count: string | null;
-  min_sqm: number | null;
-  max_sqm: number | null;
-  min_price: number | null;
-  max_price: number | null;
-  city: string | null;
-  district: string | null;
-  natural_language_prompt: string | null;
-  created_at: string;
-}
-
 export interface CustomerDetailRecord extends CustomerRecord {
   owned_properties: CustomerOwnedProperty[];
   appointments: CustomerAppointmentItem[];
-  search_requests: CustomerSearchRequestItem[];
 }
 
 export interface CustomerCreatePayload {
@@ -272,29 +254,6 @@ export interface PropertyRecord {
   created_at: string;
   owner: PropertyOwnerSummary | null;
   agency?: PropertyAgencySummary | null;
-}
-
-export interface SearchRequestRecord {
-  [key: string]: unknown;
-  id: number;
-  agency_id: number | null;
-  customer_id: number;
-  customer_name: string;
-  customer_type: string;
-  customer_phone: string;
-  listing_type: string;
-  property_type: string;
-  min_sqm: number | null;
-  max_sqm: number | null;
-  room_count: string;
-  floor_preference: number | null;
-  heating_type: string;
-  min_price: number | null;
-  max_price: number | null;
-  city: string;
-  district: string;
-  natural_language_prompt: string;
-  created_at: string;
 }
 
 export interface PropertyInfoSheetData {

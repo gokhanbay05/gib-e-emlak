@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from app.core.database import check_database_connection, get_db
 from app.models import (
     Agency,
+    AgencyReview,
     Appointment,
     BlockedSlot,
+    ChatMessage,
+    ChatThread,
     Customer,
-    CustomerSearchRequest,
     Favorite,
     Property,
     User,
@@ -72,14 +74,6 @@ def database_overview(db: Session = Depends(get_db)) -> dict:
             "row_count": db.scalar(select(func.count()).select_from(Property)) or 0,
         },
         {
-            "table_name": "customer_search_requests",
-            "module": "Arama Talepleri",
-            "description": "Müşterilerin aradıkları emlak kriterleri ve doğal dil istemleri",
-            "row_count": (
-                db.scalar(select(func.count()).select_from(CustomerSearchRequest)) or 0
-            ),
-        },
-        {
             "table_name": "appointments",
             "module": "Randevular",
             "description": "Fiziki/telefon randevuları, 6 saat iptal kuralı ve görüşme notları",
@@ -96,6 +90,24 @@ def database_overview(db: Session = Depends(get_db)) -> dict:
             "module": "Favoriler",
             "description": "Kayıtlı müşterilerin favori ilanları",
             "row_count": db.scalar(select(func.count()).select_from(Favorite)) or 0,
+        },
+        {
+            "table_name": "agency_reviews",
+            "module": "Ofis Değerlendirmeleri",
+            "description": "Tamamlanan randevular sonrası müşteri yıldız puanı ve yorumları",
+            "row_count": db.scalar(select(func.count()).select_from(AgencyReview)) or 0,
+        },
+        {
+            "table_name": "chat_threads",
+            "module": "Mesajlaşma Odaları",
+            "description": "Müşteri ve danışman arası randevu/satış iletişim kanalları",
+            "row_count": db.scalar(select(func.count()).select_from(ChatThread)) or 0,
+        },
+        {
+            "table_name": "chat_messages",
+            "module": "Mesaj Kayıtları",
+            "description": "Mesajlaşma odalarındaki anlık sohbet mesajları",
+            "row_count": db.scalar(select(func.count()).select_from(ChatMessage)) or 0,
         },
     ]
 

@@ -6,7 +6,6 @@ import type {
   PropertyRecord,
   PropertyStatus,
   PropertyType,
-  SearchRequestRecord,
 } from '../types';
 import { apiRequest } from './client';
 
@@ -62,23 +61,6 @@ export interface PropertyUpsertPayload {
   usage_status?: string;
   features?: string[];
   advisor_name?: string;
-}
-
-export interface CreateSearchRequestPayload {
-  agency_id: number;
-  customer_id: number;
-  listing_type: string;
-  property_type?: string;
-  min_sqm?: number | null;
-  max_sqm?: number | null;
-  room_count?: string;
-  floor_preference?: number | null;
-  heating_type?: string;
-  min_price?: number | null;
-  max_price?: number | null;
-  city?: string;
-  district?: string;
-  natural_language_prompt?: string;
 }
 
 export function fetchProperties(
@@ -216,36 +198,6 @@ export function uploadPropertyImageFile(file: File): Promise<{
     method: 'POST',
     body: formData,
   });
-}
-
-export function fetchSearchRequests(params?: {
-  agency_id?: number;
-  customer_id?: number;
-}): Promise<{ search_requests: SearchRequestRecord[] }> {
-  const qs = new URLSearchParams();
-  if (params?.agency_id !== undefined) {
-    qs.set('agency_id', String(params.agency_id));
-  }
-  if (params?.customer_id !== undefined) {
-    qs.set('customer_id', String(params.customer_id));
-  }
-  const suffix = qs.toString() ? `?${qs.toString()}` : '';
-  return apiRequest<{ search_requests: SearchRequestRecord[] }>(
-    `/api/properties/search-requests${suffix}`,
-  );
-}
-
-export function createSearchRequest(
-  payload: CreateSearchRequestPayload,
-): Promise<{ message: string; search_request: SearchRequestRecord }> {
-  return apiRequest<{ message: string; search_request: SearchRequestRecord }>(
-    '/api/properties/search-requests',
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    },
-  );
 }
 
 export function fetchPropertyInfoSheet(

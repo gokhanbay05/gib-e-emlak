@@ -12,8 +12,9 @@ from app.models import (
 
 
 def _apply_schema_migrations() -> None:
-    """Mevcut PostgreSQL tablolarında eksik sütunlar varsa güvenle ekler."""
+    """Mevcut PostgreSQL tablolarında eksik sütunlar varsa güvenle ekler ve kullanılmayan tabloları temizler."""
     with engine.begin() as conn:
+        conn.execute(text("DROP TABLE IF EXISTS customer_search_requests CASCADE"))
         conn.execute(text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS city VARCHAR(60)"))
         conn.execute(text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS district VARCHAR(80)"))
         conn.execute(text("ALTER TABLE agencies ADD COLUMN IF NOT EXISTS neighborhood VARCHAR(120)"))
@@ -42,6 +43,8 @@ def _apply_schema_migrations() -> None:
 def init_db_and_seed(force_reset: bool = False) -> dict:
     """PostgreSQL tablolarını oluşturur; boşsa veya force_reset=True ise temiz başlangıç verisini yükler."""
     if force_reset:
+        with engine.begin() as conn:
+            conn.execute(text("DROP TABLE IF EXISTS customer_search_requests CASCADE"))
         Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     _apply_schema_migrations()
