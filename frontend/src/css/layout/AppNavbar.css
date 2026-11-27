@@ -1,0 +1,314 @@
+.app-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 950;
+  height: var(--navbar-height);
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-xs);
+}
+
+.app-navbar-inner {
+  max-width: 1420px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+/* Hepsiemlak Tarzı Marka Logosu (Mavi buton değil, gerçek marka linki!) */
+.brand-logo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.brand-roof-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #be123c 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(225, 29, 72, 0.25);
+}
+
+.brand-logo-text {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--color-text-dark);
+}
+
+.brand-logo-text span {
+  color: var(--color-primary);
+}
+
+.brand-logo-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  margin-left: -2px;
+  align-self: flex-start;
+}
+
+/* Orta Navigasyon Linkleri */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.navbar-link-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 13px;
+  border-radius: var(--radius-pill);
+  border: none;
+  background: transparent;
+  color: var(--color-text-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  white-space: nowrap;
+}
+
+.navbar-link-item:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
+}
+
+.navbar-link-item.is-active {
+  color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+}
+
+/* Hepsiemlak Ortalanmış Yuvarlak Arama Çubuğu */
+.navbar-search-wrap {
+  flex: 1;
+  max-width: 440px;
+  min-width: 200px;
+}
+
+.navbar-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 40px;
+  background-color: var(--color-bg-surface-alt);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-pill);
+  padding: 0 12px 0 14px;
+  transition: all 0.18s ease;
+}
+
+.navbar-search-box:focus-within {
+  background-color: var(--color-bg-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.navbar-search-sparkle {
+  color: var(--color-ai-accent);
+  display: flex;
+  align-items: center;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.navbar-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--color-text-dark);
+  min-width: 0;
+}
+
+.navbar-search-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.navbar-search-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.navbar-search-btn:hover {
+  color: var(--color-primary);
+}
+
+/* Sağ Aksiyonlar & Hepsiemlak Screenshot #5 Popover Menüsü */
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.user-popover-anchor {
+  position: relative;
+}
+
+.user-trigger-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  color: var(--color-text-dark);
+}
+
+.user-trigger-pill:hover {
+  border-color: var(--color-primary-border);
+  box-shadow: var(--shadow-xs);
+}
+
+.user-trigger-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+  text-align: left;
+}
+
+.user-trigger-top {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.user-trigger-bottom {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+/* Screenshot #5 Popover Card */
+.user-popover-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 248px;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 16px;
+  z-index: 1050;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: modal-pop-in 0.15s ease-out;
+}
+
+.user-popover-header {
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+
+.user-popover-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.user-popover-role {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.user-popover-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-text-body);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.user-popover-item:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-text-dark);
+}
+
+.user-popover-item.is-danger {
+  color: var(--color-danger-text);
+}
+
+.user-popover-item.is-danger:hover {
+  background-color: var(--color-danger-bg);
+}
+
+.user-popover-divider {
+  height: 1px;
+  background-color: var(--color-border-default);
+  margin: 4px 0;
+}
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 1080px) {
+  .navbar-links {
+    display: none;
+  }
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-navbar-inner {
+    padding: 0 14px;
+    gap: 10px;
+  }
+  .navbar-search-wrap {
+    display: none;
+  }
+}

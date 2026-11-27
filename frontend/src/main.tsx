@@ -1,15 +1,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@astryxdesign/core/reset.css';
-import '@astryxdesign/core/astryx.css';
-import { Theme } from '@astryxdesign/core/theme';
-import { themes, defaultThemeSlug } from './astryx-themes';
-import App from './App';
+import './index.css';
+import { App } from './App';
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+if (!rootElement) {
+  throw new Error('Root element #root not found');
+}
+
+createRoot(rootElement).render(
   <StrictMode>
-    <Theme theme={themes[defaultThemeSlug]}>
-      <App />
-    </Theme>
+    <App />
   </StrictMode>,
 );

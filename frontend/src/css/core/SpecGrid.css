@@ -1,0 +1,37 @@
+.spec-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 18px;
+}
+
+.spec-pill-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  background-color: var(--color-bg-surface-alt);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.spec-pill-label {
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.spec-pill-value {
+  color: var(--color-text-dark);
+  font-weight: 700;
+  text-align: right;
+}
+
+.spec-pill-value.is-highlight {
+  color: var(--color-primary);
+}
+
+@media (max-width: 720px) {
+  .spec-grid {
+    grid-template-columns: 1fr;
+  }
+}

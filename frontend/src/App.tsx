@@ -1,255 +1,298 @@
-import { useEffect, useState } from 'react';
-import { AppLayout } from './components/layout/AppLayout';
-import { AgencyProfilePage } from './pages/AgencyProfilePage';
-import { AuthPage } from './pages/AuthPage';
-import { CalendarPage } from './pages/CalendarPage';
-import { CustomersPage } from './pages/CustomersPage';
-import { MarketplacePage } from './pages/MarketplacePage';
-import { PlaceholderPage } from './pages/PlaceholderPage';
-import { PropertiesPage } from './pages/PropertiesPage';
-import { PropertySearchPage } from './pages/PropertySearchPage';
-import { SellRequestPage } from './pages/SellRequestPage';
+import React, { useEffect, useState } from 'react';
+import { AppNavbar } from './components/layout';
+import AiSearchModal from './components/modals/AiSearchModal';
 import {
-  type NavDestination,
-  type SessionAgency,
-  type UserSession,
+  parseRouteFromLocation,
+  pushRouteToHistory,
+  type AuthTabKey,
+  type ProfileTabKey,
+  type RouteState,
+} from './lib/router';
+import AgencyProfilePage from './pages/AgencyProfilePage';
+import AgencyStorefrontPage from './pages/AgencyStorefrontPage';
+import AuthPage from './pages/AuthPage';
+import CalendarPage from './pages/CalendarPage';
+import CustomersPage from './pages/CustomersPage';
+import MarketplacePage from './pages/MarketplacePage';
+import ProfilePage from './pages/ProfilePage';
+import PropertiesPage from './pages/PropertiesPage';
+import PropertyDetailPage from './pages/PropertyDetailPage';
+import ReportsPage from './pages/ReportsPage';
+import SellRequestPage from './pages/SellRequestPage';
+import {
   VISITOR_SESSION,
+  type NavDestination,
+  type PropertyRecord,
+  type UserSession,
 } from './types';
 
-const SESSION_STORAGE_KEY = 'gib_emlak_active_session_v1';
+const SESSION_STORAGE_KEY = 'gib_emlak_session_v3';
+const THEME_STORAGE_KEY = 'gib_emlak_theme_v3';
 
-const ROLE_DEFAULT_NAV: Record<UserSession['role'], NavDestination> = {
-  AGENT: 'agency',
-  CUSTOMER: 'marketplace',
-  VISITOR: 'marketplace',
-};
-
-const ROLE_ALLOWED_NAVS: Record<UserSession['role'], NavDestination[]> = {
-  AGENT: [
-    'agency',
-    'customers',
-    'properties',
-    'search',
-    'calendar',
-    'ai-match',
-    'reports',
-  ],
-  CUSTOMER: ['marketplace', 'sell-request', 'calendar', 'ai-match'],
-  VISITOR: ['marketplace', 'sell-request'],
-};
-
-const PLACEHOLDER_META: Record<
-  'ai-match' | 'reports',
-  { title: string; description: string }
-> = {
-  'ai-match': {
-    title: 'Akıllı Eşleştirme',
-    description:
-      'Doğal dil tasviri ile yapay zeka destekli ilan eşleştirme (P10).',
-  },
-  reports: {
-    title: 'Performans Raporları',
-    description:
-      'Satış, kiralama ve randevu saat dağılımı istatistikleri (P11).',
-  },
-};
-
-function loadSavedSession(): UserSession | null {
-  try {
-    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as UserSession;
-    if (parsed && typeof parsed.role === 'string') {
-      return parsed;
-    }
-  } catch {
-    // ignore storage errors
-  }
-  return null;
-}
-
-export default function App() {
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(() =>
-    loadSavedSession(),
+export function App() {
+  const [route, setRoute] = useState<RouteState>(() =>
+    parseRouteFromLocation(),
   );
-  const [selectedNav, setSelectedNav] = useState<NavDestination>(() => {
-    const saved = loadSavedSession();
-    return saved ? ROLE_DEFAULT_NAV[saved.role] : 'agency';
+  const [session, setSession] = useState<UserSession>(() => {
+    try {
+      const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+      if (saved) return JSON.parse(saved) as UserSession;
+    } catch {
+      // ignore
+    }
+    return VISITOR_SESSION;
   });
-  const [marketplaceAgencyId, setMarketplaceAgencyId] = useState<number | null>(
+
+  const [colorScheme, setColorScheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY);
+    return saved === 'dark' ? 'dark' : 'light';
+  });
+
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+  const [selectedProperty, setSelectedProperty] =
+    useState<PropertyRecord | null>(null);
+  const [authPromptMessage, setAuthPromptMessage] = useState<string | null>(
     null,
   );
+  const [aiSearchOpen, setAiSearchOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Oturumu tarayıcıda sakla
+  // Tarayıcı Geri / İleri (popstate) senkronizasyonu
   useEffect(() => {
-    try {
-      if (currentUser) {
-        window.localStorage.setItem(
-          SESSION_STORAGE_KEY,
-          JSON.stringify(currentUser),
-        );
-      } else {
-        window.localStorage.removeItem(SESSION_STORAGE_KEY);
-      }
-    } catch {
-      // ignore storage errors
-    }
-  }, [currentUser]);
+    const handlePopState = () => {
+      setRoute(parseRouteFromLocation());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
-  const handleAuthenticated = (session: UserSession) => {
-    setCurrentUser(session);
-    setSelectedNav(ROLE_DEFAULT_NAV[session.role]);
-    setMarketplaceAgencyId(null);
+  // Açık / Koyu Tema sınıfı
+  useEffect(() => {
+    const root = document.documentElement;
+    if (colorScheme === 'dark') {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+    localStorage.setItem(THEME_STORAGE_KEY, colorScheme);
+  }, [colorScheme]);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    window.setTimeout(() => {
+      setToastMessage((curr) => (curr === msg ? null : curr));
+    }, 3400);
   };
 
-  const handleContinueAsVisitor = () => {
-    setCurrentUser(VISITOR_SESSION);
-    setSelectedNav('marketplace');
-    setMarketplaceAgencyId(null);
+  const navigateTo = (
+    page: NavDestination,
+    opts?: {
+      propertyId?: number | null;
+      agencyId?: number | null;
+      advisorId?: number | null;
+      profileTab?: ProfileTabKey;
+      authTab?: AuthTabKey;
+      listingType?: 'ALL' | 'SATILIK' | 'KIRALIK';
+    },
+  ) => {
+    const next = pushRouteToHistory({
+      page,
+      propertyId:
+        opts?.propertyId !== undefined ? opts.propertyId : route.propertyId,
+      agencyId: opts?.agencyId !== undefined ? opts.agencyId : route.agencyId,
+      advisorId:
+        opts?.advisorId !== undefined ? opts.advisorId : route.advisorId,
+      profileTab: opts?.profileTab ?? route.profileTab,
+      authTab: opts?.authTab ?? route.authTab,
+      listingType: opts?.listingType ?? route.listingType,
+    });
+    setRoute(next);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleSelectProperty = (property: PropertyRecord) => {
+    setSelectedProperty(property);
+    navigateTo('property-detail', { propertyId: property.id });
+  };
+
+  const handleSelectAgency = (agencyId: number, advisorId?: number) => {
+    navigateTo('agency-storefront', {
+      agencyId,
+      advisorId: advisorId ?? null,
+    });
+  };
+
+  const handleRequireAuth = (reason: string) => {
+    setAuthPromptMessage(reason);
+    navigateTo('auth', { authTab: 'login' });
+  };
+
+  const handleLoginSuccess = (user: UserSession) => {
+    setSession(user);
+    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+    setAuthPromptMessage(null);
+    showToast(`Hoş geldiniz, ${user.full_name}`);
+    if (user.role === 'AGENT') {
+      navigateTo('properties');
+    } else {
+      navigateTo('marketplace');
+    }
   };
 
   const handleLogout = () => {
-    setCurrentUser(null);
-    setMarketplaceAgencyId(null);
-  };
-
-  const handleAgencyUpdated = (updatedAgency: SessionAgency) => {
-    setCurrentUser((prev) =>
-      prev ? { ...prev, agency: updatedAgency } : null,
-    );
-  };
-
-  const handleNavigate = (dest: NavDestination) => {
-    if (!currentUser) return;
-    if (dest === 'auth') {
-      handleLogout();
-      return;
-    }
-    const allowed = ROLE_ALLOWED_NAVS[currentUser.role];
-    const target = allowed.includes(dest)
-      ? dest
-      : ROLE_DEFAULT_NAV[currentUser.role];
-
-    if (target === 'marketplace') {
-      setMarketplaceAgencyId(null);
-    }
-    setSelectedNav(target);
-  };
-
-  // Oturum yoksa doğrudan tam ekran Giriş / Kayıt ekranını göster
-  if (!currentUser) {
-    return (
-      <AuthPage
-        onAuthenticated={handleAuthenticated}
-        onContinueAsVisitor={handleContinueAsVisitor}
-      />
-    );
-  }
-
-  // Rol koruması: aktif sayfa bu role ait değilse varsayılan sayfaya çek
-  const allowedNavs = ROLE_ALLOWED_NAVS[currentUser.role];
-  const safeNav = allowedNavs.includes(selectedNav)
-    ? selectedNav
-    : ROLE_DEFAULT_NAV[currentUser.role];
-
-  const noop = () => {};
-
-  const renderPage = () => {
-    if (safeNav === 'agency') {
-      return (
-        <AgencyProfilePage
-          currentUser={currentUser}
-          onAgencyUpdated={handleAgencyUpdated}
-          onNavigateAuth={handleLogout}
-        />
-      );
-    }
-
-    if (safeNav === 'customers') {
-      return (
-        <CustomersPage
-          currentUser={currentUser}
-          onNavigateAuth={handleLogout}
-          onDataChanged={noop}
-        />
-      );
-    }
-
-    if (safeNav === 'properties') {
-      return (
-        <PropertiesPage
-          currentUser={currentUser}
-          onNavigateAuth={handleLogout}
-          onDataChanged={noop}
-        />
-      );
-    }
-
-    if (safeNav === 'search') {
-      return (
-        <PropertySearchPage
-          currentUser={currentUser}
-          onNavigateAuth={handleLogout}
-          onDataChanged={noop}
-        />
-      );
-    }
-
-    if (safeNav === 'calendar') {
-      return (
-        <CalendarPage
-          currentUser={currentUser}
-          onNavigateAuth={handleLogout}
-          onDataChanged={noop}
-        />
-      );
-    }
-
-    if (safeNav === 'marketplace') {
-      return (
-        <MarketplacePage
-          currentUser={currentUser}
-          onNavigate={handleNavigate}
-          onNavigateAuth={handleLogout}
-          initialAgencyId={marketplaceAgencyId}
-        />
-      );
-    }
-
-    if (safeNav === 'sell-request') {
-      return (
-        <SellRequestPage
-          currentUser={currentUser}
-          onNavigate={handleNavigate}
-          onNavigateAuth={handleLogout}
-          onDataChanged={noop}
-          onViewAgencyListings={(agencyId) => {
-            setMarketplaceAgencyId(agencyId);
-            setSelectedNav('marketplace');
-          }}
-        />
-      );
-    }
-
-    const meta = PLACEHOLDER_META[safeNav as 'ai-match' | 'reports'];
-    return (
-      <PlaceholderPage
-        title={meta.title}
-        description={meta.description}
-        onNavigate={handleNavigate}
-      />
-    );
+    setSession(VISITOR_SESSION);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    showToast('Oturumunuz güvenli şekilde kapatıldı.');
+    navigateTo('marketplace', { listingType: 'ALL' });
   };
 
   return (
-    <AppLayout
-      selectedNav={safeNav}
-      onNavigate={handleNavigate}
-      currentUser={currentUser}
-      onOpenAuth={handleLogout}
-      onLogout={handleLogout}
-    >
-      {renderPage()}
-    </AppLayout>
+    <div>
+      <AppNavbar
+        activePage={route.page}
+        listingType={route.listingType}
+        session={session}
+        colorScheme={colorScheme}
+        searchQuery={globalSearchQuery}
+        onSearchQueryChange={setGlobalSearchQuery}
+        onSearchSubmit={() => {
+          if (
+            route.page !== 'marketplace' &&
+            route.page !== 'properties' &&
+            route.page !== 'customers'
+          ) {
+            navigateTo('marketplace');
+          }
+        }}
+        onToggleColorScheme={() =>
+          setColorScheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+        }
+        onNavigate={(page, opts) => navigateTo(page, opts)}
+        onLogout={handleLogout}
+      />
+
+      {route.page === 'marketplace' && (
+        <MarketplacePage
+          session={session}
+          globalSearchQuery={globalSearchQuery}
+          initialListingType={route.listingType}
+          onGlobalSearchChange={setGlobalSearchQuery}
+          onSelectProperty={handleSelectProperty}
+          onSelectAgency={handleSelectAgency}
+          onRequireAuth={handleRequireAuth}
+          onOpenAiSearch={() => setAiSearchOpen(true)}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'property-detail' && (
+        <PropertyDetailPage
+          propertyId={route.propertyId}
+          initialProperty={selectedProperty}
+          session={session}
+          onSelectProperty={handleSelectProperty}
+          onSelectAgency={handleSelectAgency}
+          onBackToMarketplace={() =>
+            navigateTo('marketplace', { listingType: 'ALL' })
+          }
+          onRequireAuth={handleRequireAuth}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'agency-storefront' && (
+        <AgencyStorefrontPage
+          agencyId={route.agencyId}
+          initialAdvisorId={route.advisorId}
+          session={session}
+          onSelectProperty={handleSelectProperty}
+          onSelectAgency={handleSelectAgency}
+          onBackToMarketplace={() =>
+            navigateTo('marketplace', { listingType: 'ALL' })
+          }
+          onRequireAuth={handleRequireAuth}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'auth' && (
+        <AuthPage
+          initialTab={route.authTab}
+          authPromptMessage={authPromptMessage}
+          onLoginSuccess={handleLoginSuccess}
+        />
+      )}
+
+      {route.page === 'profile' && (
+        <ProfilePage
+          session={session}
+          initialTab={route.profileTab}
+          onTabChange={(tab) => navigateTo('profile', { profileTab: tab })}
+          onSessionUpdate={(user) => {
+            setSession(user);
+            localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+          }}
+          onSelectProperty={handleSelectProperty}
+          onLogout={handleLogout}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'sell-request' && (
+        <SellRequestPage
+          session={session}
+          onSuccess={(msg) => {
+            showToast(msg);
+            if (session.role === 'CUSTOMER') {
+              navigateTo('profile', { profileTab: 'sell-requests' });
+            } else {
+              navigateTo('marketplace');
+            }
+          }}
+        />
+      )}
+
+      {route.page === 'calendar' && (
+        <CalendarPage session={session} onNotify={showToast} />
+      )}
+
+      {route.page === 'properties' && (
+        <PropertiesPage
+          session={session}
+          globalSearchQuery={globalSearchQuery}
+          onSelectProperty={handleSelectProperty}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'customers' && (
+        <CustomersPage
+          session={session}
+          globalSearchQuery={globalSearchQuery}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'agency' && (
+        <AgencyProfilePage
+          session={session}
+          onPreviewStorefront={(agId) => handleSelectAgency(agId)}
+          onNotify={showToast}
+        />
+      )}
+
+      {route.page === 'reports' && <ReportsPage session={session} />}
+
+      <AiSearchModal
+        isOpen={aiSearchOpen}
+        onClose={() => setAiSearchOpen(false)}
+        onSelectProperty={handleSelectProperty}
+      />
+
+      {toastMessage && <div className="app-toast">{toastMessage}</div>}
+    </div>
   );
 }
+
+export default App;

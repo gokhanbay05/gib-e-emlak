@@ -1,9 +1,25 @@
 import type {
+  AppointmentPurpose,
+  AppointmentType,
   BlockedSlotCreatePayload,
   BlockedSlotRecord,
+  CalendarAppointmentRecord,
   CalendarOverviewResponse,
 } from '../types';
 import { apiRequest } from './client';
+
+export interface AppointmentCreatePayload {
+  agency_id: number;
+  property_id?: number | null;
+  user_id?: number | null;
+  customer_name: string;
+  customer_phone: string;
+  appointment_type: AppointmentType;
+  purpose: AppointmentPurpose;
+  start_time: string;
+  end_time: string;
+  meeting_notes?: string;
+}
 
 export function fetchCalendarOverview(params: {
   agency_id: number;
@@ -21,6 +37,49 @@ export function fetchCalendarOverview(params: {
   return apiRequest<CalendarOverviewResponse>(
     `/api/appointments/calendar?${searchParams.toString()}`,
   );
+}
+
+export function createAppointment(payload: AppointmentCreatePayload): Promise<{
+  message: string;
+  appointment: CalendarAppointmentRecord;
+}> {
+  return apiRequest<{
+    message: string;
+    appointment: CalendarAppointmentRecord;
+  }>('/api/appointments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function cancelAppointment(appointmentId: number): Promise<{
+  message: string;
+  appointment: CalendarAppointmentRecord;
+}> {
+  return apiRequest<{
+    message: string;
+    appointment: CalendarAppointmentRecord;
+  }>(`/api/appointments/${appointmentId}/cancel`, {
+    method: 'POST',
+  });
+}
+
+export function updateAppointmentDetails(
+  appointmentId: number,
+  payload: { status?: string; meeting_notes?: string },
+): Promise<{
+  message: string;
+  appointment: CalendarAppointmentRecord;
+}> {
+  return apiRequest<{
+    message: string;
+    appointment: CalendarAppointmentRecord;
+  }>(`/api/appointments/${appointmentId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }
 
 export function fetchBlockedSlots(

@@ -1,163 +1,89 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AspectRatio } from '@astryxdesign/core/AspectRatio';
-import { Avatar } from '@astryxdesign/core/Avatar';
-import { Badge } from '@astryxdesign/core/Badge';
-import { Banner } from '@astryxdesign/core/Banner';
-import { Button } from '@astryxdesign/core/Button';
-import { Card } from '@astryxdesign/core/Card';
-import { Divider } from '@astryxdesign/core/Divider';
-import { Drawer, DrawerHeader } from '@astryxdesign/core/Drawer';
-import { EmptyState } from '@astryxdesign/core/EmptyState';
-import { Grid } from '@astryxdesign/core/Grid';
-import { Heading } from '@astryxdesign/core/Heading';
-import { HStack } from '@astryxdesign/core/HStack';
-import { Layout, LayoutContent, LayoutFooter } from '@astryxdesign/core/Layout';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
-  MetadataList,
-  MetadataListItem,
-} from '@astryxdesign/core/MetadataList';
-import { Selector } from '@astryxdesign/core/Selector';
-import { Tab, TabList } from '@astryxdesign/core/TabList';
-import { Text } from '@astryxdesign/core/Text';
-import { TextInput } from '@astryxdesign/core/TextInput';
-import { Token } from '@astryxdesign/core/Token';
-import { useToast } from '@astryxdesign/core/Toast';
-import { VStack } from '@astryxdesign/core/VStack';
-import { fetchAgencies } from '../api/agencies';
-import { ApiError } from '../api/client';
-import { addFavorite, fetchFavorites, removeFavorite } from '../api/favorites';
+  ChevronLeft,
+  LayoutGrid,
+  List,
+  Map as MapIcon,
+  RotateCcw,
+  Search,
+  SlidersHorizontal,
+  Sparkles,
+} from 'lucide-react';
 import {
-  buildPropertyPrintSheetUrl,
-  fetchProperties,
-} from '../api/properties';
-import { LocationPicker } from '../components/common/LocationPicker';
-import { PageFrame } from '../components/layout/PageFrame';
-import type {
-  AgencyRecord,
-  FavoriteItemRecord,
-  NavDestination,
-  PropertyRecord,
-  UserSession,
-} from '../types';
+  addFavorite,
+  fetchFavorites,
+  removeFavorite,
+} from '../api/favorites';
 import {
-  formatCurrencyTRY,
+  fetchDistricts,
+  fetchNeighborhoods,
+  fetchProvinces,
+} from '../api/locations';
+import { fetchProperties } from '../api/properties';
+import {
+  Breadcrumb,
+  Button,
+  Card,
+  Input,
+  Select,
+} from '../components/core';
+import {
+  PageContainer,
+  SidebarFilterLayout,
+} from '../components/layout';
+import PropertyMapView from '../components/map/PropertyMapView';
+import AppointmentModal from '../components/modals/AppointmentModal';
+import PropertyGridCard from '../components/property/PropertyGridCard';
+import PropertyHorizontalCard from '../components/property/PropertyHorizontalCard';
+import type { LocationOption, PropertyRecord, UserSession } from '../types';
+import {
   formatDigitsOnly,
-  HEATING_TYPE_LABELS,
-  LISTING_TYPE_LABELS,
-  PROPERTY_TYPE_LABELS,
+  formatListingTypeLabel,
+  normalizeTurkish,
 } from '../utils/formatters';
+import '../css/pages/MarketplacePage.css';
 
-interface MarketplacePageProps {
-  currentUser: UserSession;
-  onNavigate: (dest: NavDestination) => void;
-  onNavigateAuth: () => void;
-  initialAgencyId?: number | null;
+export interface MarketplacePageProps {
+  session: UserSession;
+  globalSearchQuery: string;
+  initialListingType?: 'ALL' | 'SATILIK' | 'KIRALIK';
+  onGlobalSearchChange: (q: string) => void;
+  onSelectProperty: (property: PropertyRecord) => void;
+  onSelectAgency: (agencyId: number, advisorId?: number) => void;
+  onRequireAuth: (reason: string) => void;
+  onOpenAiSearch: () => void;
+  onNotify: (msg: string) => void;
 }
 
-const DEFAULT_FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800';
+type ListingDisplayMode = 'horizontal' | 'grid' | 'map';
 
-const LISTING_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'Tümü (Satılık ve Kiralık)' },
-  { value: 'SATILIK', label: 'Satılık' },
-  { value: 'KIRALIK', label: 'Kiralık' },
-];
+const ROOM_OPTIONS = ['ALL', '1+0', '1+1', '2+1', '3+1', '4+1', '5+1'];
 
-const PROPERTY_TYPE_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'Tüm Emlak Türleri' },
-  { value: 'DAIRE', label: 'Daire' },
-  { value: 'VILLA', label: 'Villa' },
-  { value: 'ISYERI', label: 'İşyeri' },
-  { value: 'ARSA', label: 'Arsa' },
-];
-
-const ROOM_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'Tüm Oda Sayıları' },
-  { value: '1+0', label: '1+0 (Stüdyo)' },
-  { value: '1+1', label: '1+1' },
-  { value: '2+1', label: '2+1' },
-  { value: '3+1', label: '3+1' },
-  { value: '4+1', label: '4+1' },
-  { value: '5+1', label: '5+1' },
-];
-
-const HEATING_FILTER_OPTIONS = [
-  { value: 'ALL', label: 'Tüm Isınma Türleri' },
-  { value: 'DOGALGAZ_KOMBI', label: 'Doğalgaz Kombi' },
-  { value: 'MERKEZI', label: 'Merkezi Sistem' },
-  { value: 'YERDEN_ISITMA', label: 'Yerden Isıtma' },
-  { value: 'KLIMA', label: 'Klima' },
-  { value: 'SOBA', label: 'Soba' },
-];
-
-const SORT_OPTIONS = [
-  { value: 'created_desc', label: 'En Yeni' },
-  { value: 'price_asc', label: 'Fiyat Artan' },
-  { value: 'price_desc', label: 'Fiyat Azalan' },
-  { value: 'sqm_desc', label: 'Metrekare Azalan' },
-];
-
-function parseSort(option: string): { sort_by: string; sort_dir: string } {
-  switch (option) {
-    case 'price_asc':
-      return { sort_by: 'price', sort_dir: 'asc' };
-    case 'price_desc':
-      return { sort_by: 'price', sort_dir: 'desc' };
-    case 'sqm_desc':
-      return { sort_by: 'gross_sqm', sort_dir: 'desc' };
-    case 'created_desc':
-    default:
-      return { sort_by: 'created_at', sort_dir: 'desc' };
-  }
-}
-
-function sanitizeSignedFloor(raw: string): string {
-  const trimmed = raw.trim();
-  const isNeg = trimmed.startsWith('-');
-  const digits = trimmed.replace(/\D/g, '').slice(0, 3);
-  if (!digits) return isNeg ? '-' : '';
-  return isNeg ? `-${digits}` : digits;
-}
-
-/**
- * Ortak İlan Vitrini (P7):
- * - Girişsiz ziyaretçilerin tüm yetki belgeli emlak ofislerinin aktif ilanlarını gezmesi ve filtrelemesi
- * - BR-08 uyarınca favorilere ekleme ve randevu işlemlerinde kayıtlı kullanıcı doğrulaması
- * - İlan detayı, emlak ofisi TTBS bilgileri ve A4 Bilgi Fişi / PDF çıktısı Drawer paneli
- */
 export function MarketplacePage({
-  currentUser,
-  onNavigate,
-  onNavigateAuth,
-  initialAgencyId = null,
+  session,
+  globalSearchQuery,
+  initialListingType = 'ALL',
+  onGlobalSearchChange,
+  onSelectProperty,
+  onSelectAgency,
+  onRequireAuth,
+  onOpenAiSearch,
+  onNotify,
 }: MarketplacePageProps) {
-  const showToast = useToast();
-  const isVisitor = currentUser.role === 'VISITOR' || currentUser.id <= 0;
-
-  const [activeTab, setActiveTab] = useState<string>('ALL');
-  const [agencies, setAgencies] = useState<AgencyRecord[]>([]);
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
-  const [favoriteItems, setFavoriteItems] = useState<FavoriteItemRecord[]>([]);
-  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [togglingPropertyId, setTogglingPropertyId] = useState<number | null>(
-    null,
-  );
-  const [br08BannerMessage, setBr08BannerMessage] = useState<string | null>(
-    null,
-  );
-  const [detailProperty, setDetailProperty] = useState<PropertyRecord | null>(
-    null,
-  );
+  const [loading, setLoading] = useState(true);
+  const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
 
-  // Çoklu filtre durumları
-  const [listingType, setListingType] = useState<string>('ALL');
+  const [displayMode, setDisplayMode] =
+    useState<ListingDisplayMode>('horizontal');
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
+  const [appointmentProperty, setAppointmentProperty] =
+    useState<PropertyRecord | null>(null);
+
+  // Filtre Durumları
+  const [listingType, setListingType] = useState<string>(initialListingType);
   const [propertyType, setPropertyType] = useState<string>('ALL');
   const [roomCount, setRoomCount] = useState<string>('ALL');
-  const [heatingType, setHeatingType] = useState<string>('ALL');
-  const [selectedAgencyId, setSelectedAgencyId] = useState<string>(
-    initialAgencyId ? String(initialAgencyId) : 'ALL',
-  );
   const [city, setCity] = useState<string>('');
   const [district, setDistrict] = useState<string>('');
   const [neighborhood, setNeighborhood] = useState<string>('');
@@ -165,67 +91,62 @@ export function MarketplacePage({
   const [maxPrice, setMaxPrice] = useState<string>('');
   const [minSqm, setMinSqm] = useState<string>('');
   const [maxSqm, setMaxSqm] = useState<string>('');
-  const [floorNumber, setFloorNumber] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortOption, setSortOption] = useState<string>('created_desc');
+  const [sortKey, setSortKey] = useState<string>('created_at:desc');
+
+  // Lokasyon Seçenekleri
+  const [provinces, setProvinces] = useState<LocationOption[]>([]);
+  const [districts, setDistricts] = useState<LocationOption[]>([]);
+  const [neighborhoods, setNeighborhoods] = useState<LocationOption[]>([]);
+
+  const isAgent = session.role === 'AGENT';
 
   useEffect(() => {
-    if (initialAgencyId !== null && initialAgencyId !== undefined) {
-      setSelectedAgencyId(String(initialAgencyId));
-      setActiveTab('ALL');
-    }
-  }, [initialAgencyId]);
+    setListingType(initialListingType);
+  }, [initialListingType]);
 
-  const loadAgenciesList = useCallback(async () => {
-    try {
-      const res = await fetchAgencies();
-      setAgencies(res.agencies);
-    } catch {
-      // ignore offline
-    }
+  useEffect(() => {
+    void fetchProvinces()
+      .then((res) => setProvinces(res.provinces))
+      .catch(() => {});
   }, []);
 
-  const loadFavoritesList = useCallback(async () => {
-    if (isVisitor) {
-      setFavoriteItems([]);
-      setFavoriteIds([]);
+  useEffect(() => {
+    if (!city) {
+      setDistricts([]);
+      setDistrict('');
+      setNeighborhoods([]);
+      setNeighborhood('');
       return;
     }
-    try {
-      const res = await fetchFavorites(currentUser.id);
-      setFavoriteItems(res.favorites);
-      setFavoriteIds(res.favorite_property_ids);
-    } catch {
-      // ignore offline
+    const found = provinces.find((p) => p.name === city);
+    if (!found) return;
+    void fetchDistricts(found.id)
+      .then((res) => setDistricts(res.districts))
+      .catch(() => {});
+  }, [city, provinces]);
+
+  useEffect(() => {
+    if (!district) {
+      setNeighborhoods([]);
+      setNeighborhood('');
+      return;
     }
-  }, [currentUser.id, isVisitor]);
+    const found = districts.find((d) => d.name === district);
+    if (!found) return;
+    void fetchNeighborhoods(found.id)
+      .then((res) => setNeighborhoods(res.neighborhoods))
+      .catch(() => {});
+  }, [district, districts]);
 
-  useEffect(() => {
-    void loadAgenciesList();
-  }, [loadAgenciesList]);
-
-  useEffect(() => {
-    setBr08BannerMessage(null);
-    void loadFavoritesList();
-  }, [loadFavoritesList]);
-
-  const loadMarketplaceProperties = useCallback(async () => {
-    setIsLoading(true);
+  const loadProperties = async () => {
+    setLoading(true);
     try {
-      const { sort_by, sort_dir } = parseSort(sortOption);
-      const parsedFloor =
-        floorNumber.trim() !== '' && floorNumber.trim() !== '-'
-          ? Number(floorNumber)
-          : undefined;
-
+      const [sortBy, sortDir] = sortKey.split(':');
       const res = await fetchProperties({
-        agency_id:
-          selectedAgencyId !== 'ALL' ? Number(selectedAgencyId) : undefined,
-        listing_type: listingType,
-        property_type: propertyType,
         status: 'AKTIF',
-        room_count: roomCount,
-        heating_type: heatingType,
+        listing_type: listingType !== 'ALL' ? listingType : undefined,
+        property_type: propertyType !== 'ALL' ? propertyType : undefined,
+        room_count: roomCount !== 'ALL' ? roomCount : undefined,
         city: city || undefined,
         district: district || undefined,
         neighborhood: neighborhood || undefined,
@@ -233,29 +154,21 @@ export function MarketplacePage({
         max_price: maxPrice ? Number(maxPrice) : undefined,
         min_sqm: minSqm ? Number(minSqm) : undefined,
         max_sqm: maxSqm ? Number(maxSqm) : undefined,
-        floor_number:
-          parsedFloor !== undefined && !Number.isNaN(parsedFloor)
-            ? parsedFloor
-            : undefined,
-        search: searchQuery || undefined,
-        sort_by,
-        sort_dir,
+        sort_by: sortBy,
+        sort_dir: sortDir,
       });
       setProperties(res.properties);
-    } catch {
-      showToast({
-        body: 'Vitrin ilanları yüklenirken bağlantı hatası oluştu.',
-        type: 'error',
-      });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    void loadProperties();
   }, [
-    selectedAgencyId,
     listingType,
     propertyType,
     roomCount,
-    heatingType,
     city,
     district,
     neighborhood,
@@ -263,46 +176,61 @@ export function MarketplacePage({
     maxPrice,
     minSqm,
     maxSqm,
-    floorNumber,
-    searchQuery,
-    sortOption,
-    showToast,
+    sortKey,
   ]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      void loadMarketplaceProperties();
-    }, 150);
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [loadMarketplaceProperties]);
+    if (session.role === 'VISITOR' || !session.id) {
+      setFavoriteIds(new Set());
+      return;
+    }
+    void fetchFavorites(session.id)
+      .then((res) => setFavoriteIds(new Set(res.favorite_property_ids)))
+      .catch(() => {});
+  }, [session]);
 
-  const agencyFilterOptions = useMemo(
-    () => [
-      { value: 'ALL', label: 'Tüm Yetki Belgeli Emlak İşletmeleri' },
-      ...agencies.map((a) => ({
-        value: String(a.id),
-        label: `${a.name} (TTBS: ${a.ttbs_document_no})`,
-      })),
-    ],
-    [agencies],
-  );
+  const filteredProperties = useMemo(() => {
+    const q = normalizeTurkish(globalSearchQuery.trim());
+    if (!q) return properties;
+    return properties.filter((p) => {
+      const haystack = normalizeTurkish(
+        `${p.id} ${150000 + p.id} ${p.title} ${p.city} ${p.district} ${p.neighborhood} ${p.room_count} ${p.agency?.name ?? ''}`,
+      );
+      return haystack.includes(q);
+    });
+  }, [properties, globalSearchQuery]);
 
-  const favoriteProperties = useMemo(() => {
-    return favoriteItems
-      .map((item) => item.property)
-      .filter((prop): prop is PropertyRecord => prop !== null);
-  }, [favoriteItems]);
+  const handleToggleFavorite = async (propertyId: number) => {
+    if (session.role === 'VISITOR') {
+      onRequireAuth('İlanı favorilerinize eklemek için lütfen üye girişi yapınız.');
+      return;
+    }
+    if (isAgent) return;
 
-  const favoriteIdSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+    const currentlyFav = favoriteIds.has(propertyId);
+    try {
+      if (currentlyFav) {
+        await removeFavorite(session.id, propertyId);
+        setFavoriteIds((prev) => {
+          const next = new Set(prev);
+          next.delete(propertyId);
+          return next;
+        });
+        onNotify('İlan favorilerinizden çıkarıldı.');
+      } else {
+        await addFavorite(session.id, propertyId);
+        setFavoriteIds((prev) => new Set(prev).add(propertyId));
+        onNotify('İlan favorilerinize eklendi.');
+      }
+    } catch {
+      // ignore
+    }
+  };
 
-  const handleClearFilters = () => {
+  const resetFilters = () => {
     setListingType('ALL');
     setPropertyType('ALL');
     setRoomCount('ALL');
-    setHeatingType('ALL');
-    setSelectedAgencyId('ALL');
     setCity('');
     setDistrict('');
     setNeighborhood('');
@@ -310,545 +238,457 @@ export function MarketplacePage({
     setMaxPrice('');
     setMinSqm('');
     setMaxSqm('');
-    setFloorNumber('');
-    setSearchQuery('');
-    setSortOption('created_desc');
+    onGlobalSearchChange('');
   };
 
-  const handleToggleFavorite = async (prop: PropertyRecord) => {
-    if (isVisitor) {
-      const msg =
-        'BR-08: İlanları favorilere ekleyebilmek için kayıtlı kullanıcı girişi yapılmalıdır.';
-      setBr08BannerMessage(msg);
-      showToast({ body: msg, type: 'error' });
-      return;
-    }
+  // Sol Filtre Sütunu İçeriği (Screenshot #2 & #4)
+  const filterContent = (
+    <>
+      {displayMode === 'map' && (
+        <Button
+          variant="outline"
+          size="sm"
+          pill
+          fullWidth
+          leftIcon={<ChevronLeft size={15} />}
+          onClick={() => setDisplayMode('horizontal')}
+        >
+          Listelemeye Dön
+        </Button>
+      )}
 
-    const currentlyFav = favoriteIdSet.has(prop.id);
-    setTogglingPropertyId(prop.id);
-    try {
-      if (currentlyFav) {
-        const res = await removeFavorite(currentUser.id, prop.id);
-        showToast({ body: res.message, type: 'info' });
-      } else {
-        const res = await addFavorite(currentUser.id, prop.id);
-        showToast({ body: res.message, type: 'info' });
-      }
-      await loadFavoritesList();
-    } catch (err) {
-      const msg =
-        err instanceof ApiError
-          ? err.message
-          : 'Favori işlemi sırasında hata oluştu.';
-      showToast({ body: msg, type: 'error' });
-    } finally {
-      setTogglingPropertyId(null);
-    }
-  };
+      {/* İlan Türü Radio Seçimi */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">İlan Türü</div>
+        <div className="filter-radio-list">
+          {[
+            { value: 'ALL', label: 'Tümü (Satılık & Kiralık)' },
+            { value: 'SATILIK', label: 'Satılık' },
+            { value: 'KIRALIK', label: 'Kiralık' },
+          ].map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className={`filter-radio-item ${listingType === opt.value ? 'is-checked' : ''}`}
+              onClick={() => setListingType(opt.value)}
+            >
+              <span className="filter-radio-dot" />
+              <span>{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
-  const handleOpenPrintSheet = (prop: PropertyRecord) => {
-    const url = buildPropertyPrintSheetUrl(
-      prop.id,
-      currentUser.customer?.id ?? null,
-      true,
-    );
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
+      {/* Konum Seçicileri */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">Konum</div>
+        <Select
+          value={city}
+          onChange={setCity}
+          placeholder="İl Seçiniz"
+          options={provinces.map((p) => ({ value: p.name, label: p.name }))}
+        />
+        <Select
+          value={district}
+          onChange={setDistrict}
+          placeholder="İlçe Seçiniz"
+          disabled={!city}
+          options={districts.map((d) => ({ value: d.name, label: d.name }))}
+        />
+        <Select
+          value={neighborhood}
+          onChange={setNeighborhood}
+          placeholder="Semt / Mahalle Seçiniz"
+          disabled={!district}
+          options={neighborhoods.map((n) => ({ value: n.name, label: n.name }))}
+        />
+      </div>
 
-  const renderPropertyCard = (prop: PropertyRecord) => {
-    const isFav = favoriteIdSet.has(prop.id);
-    const listingLabel =
-      LISTING_TYPE_LABELS[prop.listing_type] ?? prop.listing_type;
-    const propertyTypeLabel =
-      PROPERTY_TYPE_LABELS[prop.property_type] ?? prop.property_type;
-    const heatingLabel =
-      HEATING_TYPE_LABELS[prop.heating_type] ?? prop.heating_type;
+      {/* Kategori Seçimi */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">Kategori</div>
+        <div className="filter-two-col">
+          {[
+            { value: 'ALL', label: 'Tümü' },
+            { value: 'DAIRE', label: 'Konut / Daire' },
+            { value: 'VILLA', label: 'Villa' },
+            { value: 'ISYERI', label: 'İşyeri' },
+            { value: 'ARSA', label: 'Arsa' },
+          ].map((cat) => (
+            <button
+              key={cat.value}
+              type="button"
+              className={`filter-radio-item ${propertyType === cat.value ? 'is-checked' : ''}`}
+              onClick={() => setPropertyType(cat.value)}
+            >
+              <span className="filter-radio-dot" />
+              <span>{cat.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {/* Fiyat Aralığı */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">Fiyat (TL)</div>
+        <div className="filter-two-col">
+          <Input
+            inputSize="sm"
+            placeholder="En Az TL"
+            value={minPrice}
+            onChange={(e) => setMinPrice(formatDigitsOnly(e.target.value, 11))}
+          />
+          <Input
+            inputSize="sm"
+            placeholder="En Çok TL"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(formatDigitsOnly(e.target.value, 11))}
+          />
+        </div>
+      </div>
+
+      {/* Metrekare (Brüt) */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">m² (Brüt)</div>
+        <div className="filter-two-col">
+          <Input
+            inputSize="sm"
+            placeholder="En Az m²"
+            value={minSqm}
+            onChange={(e) => setMinSqm(formatDigitsOnly(e.target.value, 6))}
+          />
+          <Input
+            inputSize="sm"
+            placeholder="En Çok m²"
+            value={maxSqm}
+            onChange={(e) => setMaxSqm(formatDigitsOnly(e.target.value, 6))}
+          />
+        </div>
+      </div>
+
+      {/* Oda Sayısı */}
+      <div className="filter-group-block">
+        <div className="filter-group-title">Oda Sayısı</div>
+        <Select
+          value={roomCount}
+          onChange={setRoomCount}
+          options={ROOM_OPTIONS.map((r) => ({
+            value: r,
+            label: r === 'ALL' ? 'Tüm Oda Sayıları' : r,
+          }))}
+        />
+      </div>
+    </>
+  );
+
+  const filterFooter = (
+    <>
+      <Button
+        variant="primary"
+        pill
+        fullWidth
+        leftIcon={<Search size={15} />}
+        onClick={() => {
+          setMobileFilterOpen(false);
+          void loadProperties();
+        }}
+      >
+        Ara ({filteredProperties.length})
+      </Button>
+      <Button
+        variant="outline"
+        size="icon"
+        pill
+        onClick={resetFilters}
+        title="Filtreleri Sıfırla"
+      >
+        <RotateCcw size={15} />
+      </Button>
+    </>
+  );
+
+  if (displayMode === 'map') {
     return (
-      <Card key={prop.id} padding={3}>
-        <VStack gap={2}>
-          <AspectRatio ratio={16 / 10} fit="cover">
-            <img
-              src={prop.image_url || DEFAULT_FALLBACK_IMAGE}
-              alt={prop.title}
-            />
-          </AspectRatio>
-
-          <HStack justify="between" vAlign="center" wrap="wrap" gap={1}>
-            <Token label={`${listingLabel} · ${propertyTypeLabel}`} />
-            <Text weight="bold" size="lg">
-              {formatCurrencyTRY(prop.price)}
-            </Text>
-          </HStack>
-
-          <VStack gap={0.5}>
-            <Heading level={4}>{prop.title}</Heading>
-            <Text color="secondary" size="sm">
-              {`${prop.neighborhood}, ${prop.district} / ${prop.city}`}
-            </Text>
-          </VStack>
-
-          <Text size="sm">
-            {`${prop.room_count} · Brüt ${prop.gross_sqm} m² / Net ${prop.net_sqm} m² · ${prop.floor_number}. Kat (${prop.building_floors} Katlı) · ${heatingLabel}`}
-          </Text>
-
-          <Text color="secondary" size="sm" maxLines={2}>
-            {prop.agent_description}
-          </Text>
-
-          <Divider />
-
-          <HStack justify="between" vAlign="center" wrap="wrap" gap={1.5}>
-            <HStack gap={1.5} vAlign="center">
-              <Avatar
-                name={prop.agency?.name ?? 'Emlak Ofisi'}
-                src={prop.agency?.logo_url || undefined}
-                size="sm"
-                shape="rounded"
-              />
-              <VStack gap={0}>
-                <Text weight="medium" size="sm">
-                  {prop.agency?.name ?? 'Yetki Belgeli Emlak İşletmesi'}
-                </Text>
-                {prop.agency?.ttbs_document_no && (
-                  <Text color="secondary" size="sm">
-                    {`TTBS Belge No: ${prop.agency.ttbs_document_no}`}
-                  </Text>
-                )}
-              </VStack>
-            </HStack>
-          </HStack>
-
-          <HStack gap={1.5} wrap="wrap">
-            <Button
-              label={isFav ? 'Favoride (Çıkar)' : 'Favoriye Ekle'}
-              variant={isFav ? 'secondary' : 'ghost'}
-              size="sm"
-              isLoading={togglingPropertyId === prop.id}
-              onClick={() => void handleToggleFavorite(prop)}
-            />
-            <Button
-              label="İlan Detayı & Bilgi Fişi"
-              variant="primary"
-              size="sm"
-              onClick={() => setDetailProperty(prop)}
-            />
-          </HStack>
-        </VStack>
-      </Card>
+      <SidebarFilterLayout
+        isMapMode
+        filterContent={filterContent}
+        filterFooter={filterFooter}
+        mobileFilterOpen={mobileFilterOpen}
+        onCloseMobileFilter={() => setMobileFilterOpen(false)}
+      >
+        <PropertyMapView
+          properties={filteredProperties}
+          favoriteIds={favoriteIds}
+          hideCustomerActions={isAgent}
+          onSelectProperty={onSelectProperty}
+          onToggleFavorite={(id) => void handleToggleFavorite(id)}
+        />
+      </SidebarFilterLayout>
     );
-  };
+  }
 
   return (
-    <PageFrame
-      title="Ortak İlan Vitrini"
-      subtitle="Yetki belgeli emlak işletmelerinin aktif gayrimenkul portföyünü giriş yapmadan inceleyin, filtreleyin ve favorilerinize ekleyin."
-      action={
-        <>
-          {isVisitor && (
-            <Button
-              label="Müşteri Girişi Yap"
-              variant="primary"
-              onClick={onNavigateAuth}
-            />
-          )}
-          <Button
-            label="Evimi Sat / Kiraya Ver"
-            variant={isVisitor ? 'secondary' : 'primary'}
-            onClick={() => onNavigate('sell-request')}
-          />
-        </>
-      }
-    >
-      {isVisitor && (
-        <Banner
-          status="info"
-          title="Girişsiz Ziyaretçi Modu (BR-08)"
-          description="Tüm yetki belgeli emlak ofislerinin aktif ilanlarını giriş yapmadan gezebilir ve filtreleyebilirsiniz. Favorilere Ekleme ve Randevu Alma işlemleri için müşteri girişi yapılması gerekmektedir."
-          collapsible={false}
-        />
-      )}
+    <PageContainer size="wide">
+      {/* Hepsiemlak Screenshot #1 Hero Arama Alanı */}
+      <section className="hepsi-hero-banner">
+        <div className="hepsi-hero-inner">
+          <h1 className="hepsi-hero-title">
+            Aradığın evi bulup <span className="highlight-coral">OHH BE</span>{' '}
+            demek için GİB e-Emlak!
+          </h1>
 
-      {br08BannerMessage && isVisitor && (
-        <Banner
-          status="warning"
-          title="Müşteri Girişi Gerekiyor (BR-08)"
-          description={br08BannerMessage}
-          endContent={
-            <Button
-              label="Müşteri Girişi Yap"
-              variant="primary"
-              size="sm"
-              onClick={onNavigateAuth}
-            />
-          }
-          isDismissable
-          onDismiss={() => setBr08BannerMessage(null)}
-          collapsible={false}
-        />
-      )}
+          <div className="hepsi-hero-search-card">
+            <div className="hepsi-hero-search-row">
+              <div className="hepsi-hero-input-box">
+                <Sparkles size={17} color="var(--color-ai-accent)" />
+                <input
+                  type="text"
+                  className="hepsi-hero-input"
+                  placeholder="Konum, ilan no ya da emlak ofisi adıyla arayın (Örn. Çankaya, Kadıköy, 3+1)"
+                  value={globalSearchQuery}
+                  onChange={(e) => onGlobalSearchChange(e.target.value)}
+                />
+              </div>
 
-      <TabList value={activeTab} onChange={setActiveTab} hasDivider>
-        <Tab
-          value="ALL"
-          label="Tüm Aktif İlanlar"
-          endContent={<Badge label={properties.length} />}
-        />
-        <Tab
-          value="FAVORITES"
-          label="Favorilerim"
-          endContent={<Badge label={favoriteProperties.length} />}
-        />
-      </TabList>
+              <Button
+                variant="primary"
+                size="lg"
+                pill
+                leftIcon={<Search size={16} />}
+                onClick={() => void loadProperties()}
+              >
+                Ara
+              </Button>
 
-      {activeTab === 'ALL' && (
-        <VStack gap={4}>
-          {/* Çoklu Filtreleme Kartı */}
-          <Card padding={4}>
-            <VStack gap={3}>
-              <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
-                <Heading level={3}>Vitrin Arama ve Filtreleme</Heading>
-                <Button
-                  label="Filtreleri Sıfırla"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleClearFilters}
-                />
-              </HStack>
-              <Divider />
+              <Button
+                variant="ai"
+                size="lg"
+                pill
+                leftIcon={<Sparkles size={16} />}
+                onClick={onOpenAiSearch}
+              >
+                GİB AI ile Ara
+              </Button>
+            </div>
 
-              <Grid columns={{ minWidth: 180, max: 4 }} gap={2}>
-                <Selector
-                  label="İşlem Türü"
-                  value={listingType}
-                  options={LISTING_FILTER_OPTIONS}
-                  onChange={(val) => setListingType(val ?? 'ALL')}
-                  width="100%"
-                />
-                <Selector
-                  label="Emlak Türü"
-                  value={propertyType}
-                  options={PROPERTY_TYPE_FILTER_OPTIONS}
-                  onChange={(val) => setPropertyType(val ?? 'ALL')}
-                  width="100%"
-                />
-                <Selector
-                  label="Oda Sayısı"
-                  value={roomCount}
-                  options={ROOM_FILTER_OPTIONS}
-                  onChange={(val) => setRoomCount(val ?? 'ALL')}
-                  width="100%"
-                />
-                <Selector
-                  label="Isınma Türü"
-                  value={heatingType}
-                  options={HEATING_FILTER_OPTIONS}
-                  onChange={(val) => setHeatingType(val ?? 'ALL')}
-                  width="100%"
-                />
-              </Grid>
-
-              <Grid columns={{ minWidth: 200, max: 2 }} gap={2}>
-                <Selector
-                  label="Emlak İşletmesi"
-                  hasSearch
-                  searchPlaceholder="Emlak ofisi veya TTBS ara..."
-                  value={selectedAgencyId}
-                  options={agencyFilterOptions}
-                  onChange={(val) => setSelectedAgencyId(val ?? 'ALL')}
-                  width="100%"
-                />
-                <Selector
-                  label="Sıralama"
-                  value={sortOption}
-                  options={SORT_OPTIONS}
-                  onChange={(val) => setSortOption(val ?? 'created_desc')}
-                  width="100%"
-                />
-              </Grid>
-
-              <Grid columns={{ minWidth: 160, max: 5 }} gap={2}>
-                <TextInput
-                  inputMode="numeric"
-                  label="Min Fiyat (TL)"
-                  placeholder="Örn: 20000"
-                  value={minPrice}
-                  onChange={(val) => setMinPrice(formatDigitsOnly(val, 12))}
-                  width="100%"
-                />
-                <TextInput
-                  inputMode="numeric"
-                  label="Max Fiyat (TL)"
-                  placeholder="Örn: 8500000"
-                  value={maxPrice}
-                  onChange={(val) => setMaxPrice(formatDigitsOnly(val, 12))}
-                  width="100%"
-                />
-                <TextInput
-                  inputMode="numeric"
-                  label="Min Brüt m²"
-                  placeholder="Örn: 90"
-                  value={minSqm}
-                  onChange={(val) => setMinSqm(formatDigitsOnly(val, 6))}
-                  width="100%"
-                />
-                <TextInput
-                  inputMode="numeric"
-                  label="Max Brüt m²"
-                  placeholder="Örn: 200"
-                  value={maxSqm}
-                  onChange={(val) => setMaxSqm(formatDigitsOnly(val, 6))}
-                  width="100%"
-                />
-                <TextInput
-                  inputMode="numeric"
-                  label="Bulunduğu Kat"
-                  placeholder="Örn: 3"
-                  value={floorNumber}
-                  onChange={(val) => setFloorNumber(sanitizeSignedFloor(val))}
-                  width="100%"
-                />
-              </Grid>
-
-              <LocationPicker
-                city={city}
-                district={district}
-                neighborhood={neighborhood}
-                requiredMark={false}
-                onChange={(next) => {
-                  setCity(next.city);
-                  setDistrict(next.district);
-                  setNeighborhood(next.neighborhood);
+            <div className="hepsi-hero-chips">
+              <button
+                type="button"
+                className={`hepsi-quick-chip ${listingType === 'SATILIK' && propertyType === 'DAIRE' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setListingType('SATILIK');
+                  setPropertyType('DAIRE');
                 }}
-              />
+              >
+                Fırsat Satılık Daireler
+              </button>
+              <button
+                type="button"
+                className={`hepsi-quick-chip ${listingType === 'KIRALIK' && propertyType === 'DAIRE' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setListingType('KIRALIK');
+                  setPropertyType('DAIRE');
+                }}
+              >
+                Fırsat Kiralık Daireler
+              </button>
+              <button
+                type="button"
+                className={`hepsi-quick-chip ${propertyType === 'VILLA' ? 'is-active' : ''}`}
+                onClick={() => {
+                  setListingType('SATILIK');
+                  setPropertyType('VILLA');
+                }}
+              >
+                Müstakil Ev & Villalar
+              </button>
+              <button
+                type="button"
+                className={`hepsi-quick-chip ${city === 'Ankara' ? 'is-active' : ''}`}
+                onClick={() => setCity(city === 'Ankara' ? '' : 'Ankara')}
+              >
+                Ankara İlanları
+              </button>
+              <button
+                type="button"
+                className={`hepsi-quick-chip ${city === 'İstanbul' ? 'is-active' : ''}`}
+                onClick={() => setCity(city === 'İstanbul' ? '' : 'İstanbul')}
+              >
+                İstanbul İlanları
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
-              <TextInput
-                label="Kelime ile Arama"
-                placeholder="Başlık, mahalle, metroya yakın, güneş gören, balkonlu vb..."
-                value={searchQuery}
-                onChange={setSearchQuery}
-                width="100%"
-              />
-            </VStack>
-          </Card>
+      <Breadcrumb
+        items={[
+          { label: 'Ana Sayfa', onClick: resetFilters },
+          ...(listingType !== 'ALL'
+            ? [{ label: formatListingTypeLabel(listingType) }]
+            : [{ label: 'Tüm Gayrimenkul İlanları' }]),
+          ...(city ? [{ label: city }] : []),
+          ...(district ? [{ label: district }] : []),
+        ]}
+      />
 
-          {/* Aktif İlan Vitrin Kartları */}
-          {properties.length === 0 ? (
-            <EmptyState
-              title={
-                isLoading
-                  ? 'Aktif vitrin ilanları yükleniyor...'
-                  : 'Seçili filtrelere uygun aktif ilan bulunamadı'
-              }
-              description="Filtreleri genişletebilir veya tüm yetki belgeli emlak ofislerinin portföyünü görmek için filtreleri sıfırlayabilirsiniz."
-              actions={
-                <Button
-                  label="Filtreleri Sıfırla"
-                  variant="secondary"
-                  onClick={handleClearFilters}
-                />
-              }
-            />
-          ) : (
-            <Grid columns={{ minWidth: 280, max: 3 }} gap={3}>
-              {properties.map((prop) => renderPropertyCard(prop))}
-            </Grid>
-          )}
-        </VStack>
-      )}
-
-      {activeTab === 'FAVORITES' && (
-        <VStack gap={3}>
-          {isVisitor ? (
-            <EmptyState
-              title="Favorilerinizi görüntülemek için giriş yapın (BR-08)"
-              description="Ziyaretçiler tüm aktif ilanları giriş yapmadan gezebilir; favori listesi oluşturmak ve ilanları kaydetmek için kayıtlı kullanıcı girişi yapılmalıdır."
-              actions={
-                <Button
-                  label="Müşteri Girişi Yap"
-                  variant="primary"
-                  onClick={onNavigateAuth}
-                />
-              }
-            />
-          ) : favoriteProperties.length === 0 ? (
-            <EmptyState
-              title="Henüz favori ilanınız bulunmuyor"
-              description="Tüm Aktif İlanlar sekmesinden beğendiğiniz gayrimenkulleri favorilerinize ekleyebilirsiniz."
-              actions={
-                <Button
-                  label="Aktif İlanları İncele"
-                  variant="primary"
-                  onClick={() => setActiveTab('ALL')}
-                />
-              }
-            />
-          ) : (
-            <Grid columns={{ minWidth: 280, max: 3 }} gap={3}>
-              {favoriteProperties.map((prop) => renderPropertyCard(prop))}
-            </Grid>
-          )}
-        </VStack>
-      )}
-
-      {/* İlan Detayı & Bilgi Fişi Drawer */}
-      <Drawer
-        isOpen={detailProperty !== null}
-        onOpenChange={(open) => {
-          if (!open) setDetailProperty(null);
-        }}
-        label={detailProperty?.title ?? 'İlan Detayı'}
-        width={520}
+      <SidebarFilterLayout
+        filterContent={filterContent}
+        filterFooter={filterFooter}
+        mobileFilterOpen={mobileFilterOpen}
+        onCloseMobileFilter={() => setMobileFilterOpen(false)}
       >
-        <Layout
-          header={
-            <DrawerHeader
-              title={detailProperty?.title ?? 'İlan Detayı'}
-              subtitle={
-                detailProperty
-                  ? `${LISTING_TYPE_LABELS[detailProperty.listing_type] ?? detailProperty.listing_type} · ${PROPERTY_TYPE_LABELS[detailProperty.property_type] ?? detailProperty.property_type} · ${formatCurrencyTRY(detailProperty.price)}`
-                  : undefined
-              }
-              onOpenChange={(open) => {
-                if (!open) setDetailProperty(null);
-              }}
-              hasDivider
+        {/* Sağ Üst Sonuç Barı (Screenshot #2) */}
+        <div className="results-header-card">
+          <div className="results-count-text">
+            <strong>
+              {listingType === 'ALL'
+                ? 'Gayrimenkul İlanları'
+                : `${formatListingTypeLabel(listingType)} Ev Fiyatları`}
+            </strong>{' '}
+            için <strong>{filteredProperties.length}</strong> ilan bulundu
+          </div>
+
+          <div className="results-toolbar-right">
+            {/* Yalnızca mobilde görünen filtre tetikleyicisi */}
+            <Button
+              variant="outline"
+              size="sm"
+              pill
+              className="mobile-filter-trigger-only"
+              leftIcon={<SlidersHorizontal size={14} />}
+              onClick={() => setMobileFilterOpen(true)}
+            >
+              Filtrele
+            </Button>
+
+            <Button
+              variant="outline-primary"
+              size="sm"
+              pill
+              leftIcon={<MapIcon size={14} />}
+              onClick={() => setDisplayMode('map')}
+            >
+              Harita
+            </Button>
+
+            <Button
+              variant={displayMode === 'horizontal' ? 'secondary' : 'outline'}
+              size="icon-sm"
+              pill
+              onClick={() => setDisplayMode('horizontal')}
+              title="Geniş Liste Görünümü"
+            >
+              <List size={15} />
+            </Button>
+
+            <Button
+              variant={displayMode === 'grid' ? 'secondary' : 'outline'}
+              size="icon-sm"
+              pill
+              onClick={() => setDisplayMode('grid')}
+              title="Vitrin Kart Görünümü"
+            >
+              <LayoutGrid size={15} />
+            </Button>
+
+            <Select
+              selectSize="sm"
+              pill
+              value={sortKey}
+              onChange={setSortKey}
+              options={[
+                { value: 'created_at:desc', label: 'Sırala: En Yeni İlanlar' },
+                { value: 'price:asc', label: 'Fiyata Göre (Artan)' },
+                { value: 'price:desc', label: 'Fiyata Göre (Azalan)' },
+                { value: 'gross_sqm:desc', label: 'Metrekare (Büyükten Küçüğe)' },
+              ]}
             />
-          }
-          content={
-            <LayoutContent>
-              {detailProperty && (
-                <VStack gap={4}>
-                  <AspectRatio ratio={16 / 9} fit="cover">
-                    <img
-                      src={detailProperty.image_url || DEFAULT_FALLBACK_IMAGE}
-                      alt={detailProperty.title}
-                    />
-                  </AspectRatio>
+          </div>
+        </div>
 
-                  <HStack justify="between" vAlign="center" wrap="wrap" gap={2}>
-                    <Token
-                      label={`${LISTING_TYPE_LABELS[detailProperty.listing_type] ?? detailProperty.listing_type} · ${PROPERTY_TYPE_LABELS[detailProperty.property_type] ?? detailProperty.property_type}`}
-                    />
-                    <Heading level={3}>
-                      {formatCurrencyTRY(detailProperty.price)}
-                    </Heading>
-                  </HStack>
+        {/* İlan Kartları Listesi */}
+        {loading ? (
+          <Card padding="lg">
+            <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
+              Gayrimenkul ilanları yükleniyor...
+            </div>
+          </Card>
+        ) : filteredProperties.length === 0 ? (
+          <Card padding="lg">
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '24px 0',
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: 700 }}>
+                Seçtiğiniz filtrelere uygun ilan bulunamadı
+              </div>
+              <Button variant="primary" pill onClick={resetFilters}>
+                Tüm Filtreleri Temizle
+              </Button>
+            </div>
+          </Card>
+        ) : displayMode === 'grid' ? (
+          <div className="property-cards-grid">
+            {filteredProperties.map((p) => (
+              <PropertyGridCard
+                key={p.id}
+                property={p}
+                isFavorited={favoriteIds.has(p.id)}
+                hideCustomerActions={isAgent}
+                onSelect={onSelectProperty}
+                onToggleFavorite={(id) => void handleToggleFavorite(id)}
+                onSelectAgency={onSelectAgency}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="property-cards-stack">
+            {filteredProperties.map((p) => (
+              <PropertyHorizontalCard
+                key={p.id}
+                property={p}
+                isFavorited={favoriteIds.has(p.id)}
+                hideCustomerActions={isAgent}
+                onSelect={onSelectProperty}
+                onToggleFavorite={(id) => void handleToggleFavorite(id)}
+                onSelectAgency={onSelectAgency}
+                onRequestAppointment={(prop) => setAppointmentProperty(prop)}
+              />
+            ))}
+          </div>
+        )}
+      </SidebarFilterLayout>
 
-                  <MetadataList>
-                    <MetadataListItem label="İlan Kayıt No">
-                      <Text weight="medium">{`#${detailProperty.id}`}</Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Oda Sayısı">
-                      <Text weight="medium">{detailProperty.room_count}</Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Brüt / Net Metrekare">
-                      <Text>
-                        {`${detailProperty.gross_sqm} m² Brüt / ${detailProperty.net_sqm} m² Net`}
-                      </Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Bulunduğu Kat / Bina Katı">
-                      <Text>
-                        {`${detailProperty.floor_number}. Kat / ${detailProperty.building_floors} Katlı`}
-                      </Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Isınma Sistemi">
-                      <Text>
-                        {HEATING_TYPE_LABELS[detailProperty.heating_type] ??
-                          detailProperty.heating_type}
-                      </Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Konum">
-                      <Text>
-                        {`${detailProperty.neighborhood}, ${detailProperty.district} / ${detailProperty.city}`}
-                      </Text>
-                    </MetadataListItem>
-                    <MetadataListItem label="Açık Adres">
-                      <Text>{detailProperty.address_detail}</Text>
-                    </MetadataListItem>
-                  </MetadataList>
+      {/* Sağ Altta Yalnızca İlan Vitrini Sayfasında Görünen HepsiAI Tetikleyicisi */}
+      <button
+        type="button"
+        className="floating-hepsi-ai-btn"
+        onClick={onOpenAiSearch}
+      >
+        <Sparkles size={17} color="#8b5cf6" />
+        <span>
+          <strong>GİB</strong>
+          <span className="ai-grad-text">AI ile Ara</span>
+        </span>
+      </button>
 
-                  <Card padding={3} variant="muted">
-                    <VStack gap={1}>
-                      <Heading level={4}>Emlakçı Özel Tasviri</Heading>
-                      <Text size="sm">{detailProperty.agent_description}</Text>
-                    </VStack>
-                  </Card>
-
-                  {detailProperty.agency && (
-                    <Card padding={3} variant="muted">
-                      <VStack gap={2}>
-                        <Heading level={4}>
-                          Yetki Belgeli Emlak İşletmesi İletişim Bilgileri
-                        </Heading>
-                        <HStack gap={2} vAlign="center">
-                          <Avatar
-                            name={detailProperty.agency.name}
-                            src={detailProperty.agency.logo_url || undefined}
-                            size="md"
-                            shape="rounded"
-                          />
-                          <VStack gap={0.5}>
-                            <Text weight="semibold">
-                              {detailProperty.agency.name}
-                            </Text>
-                            <Token
-                              label={`TTBS Belge No: ${detailProperty.agency.ttbs_document_no}`}
-                            />
-                          </VStack>
-                        </HStack>
-                        <MetadataList>
-                          <MetadataListItem label="Yetkili Danışman">
-                            <Text>{detailProperty.agency.authorized_person}</Text>
-                          </MetadataListItem>
-                          <MetadataListItem label="Ofis / Cep Telefonu">
-                            <Text>
-                              {`${detailProperty.agency.phone}${detailProperty.agency.mobile_phone ? ` · ${detailProperty.agency.mobile_phone}` : ''}`}
-                            </Text>
-                          </MetadataListItem>
-                          <MetadataListItem label="İşletme Adresi">
-                            <Text>{detailProperty.agency.address}</Text>
-                          </MetadataListItem>
-                        </MetadataList>
-                      </VStack>
-                    </Card>
-                  )}
-                </VStack>
-              )}
-            </LayoutContent>
-          }
-          footer={
-            <LayoutFooter hasDivider>
-              <HStack justify="between" vAlign="center" wrap="wrap" gap={1.5}>
-                <Button
-                  label="Kapat"
-                  variant="ghost"
-                  onClick={() => setDetailProperty(null)}
-                />
-                <HStack gap={1.5} wrap="wrap">
-                  <Button
-                    label="A4 Bilgi Fişi / PDF Yazdır"
-                    variant="secondary"
-                    onClick={() => {
-                      if (detailProperty) {
-                        handleOpenPrintSheet(detailProperty);
-                      }
-                    }}
-                  />
-                  <Button
-                    label="Randevu Takvimine Git"
-                    variant="primary"
-                    onClick={() => {
-                      setDetailProperty(null);
-                      onNavigate('calendar');
-                    }}
-                  />
-                </HStack>
-              </HStack>
-            </LayoutFooter>
-          }
-        />
-      </Drawer>
-    </PageFrame>
+      <AppointmentModal
+        property={appointmentProperty}
+        session={session}
+        onClose={() => setAppointmentProperty(null)}
+        onBooked={onNotify}
+        onRequireAuth={() =>
+          onRequireAuth('Randevu oluşturmak için lütfen giriş yapınız.')
+        }
+      />
+    </PageContainer>
   );
 }
+
+export default MarketplacePage;

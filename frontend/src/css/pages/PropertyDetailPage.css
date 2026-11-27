@@ -1,0 +1,163 @@
+/* Hepsiemlak Screenshot #6, #7, #8, #9, #10 İlan Detay Sayfası */
+.detail-title-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.detail-main-heading {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  letter-spacing: -0.015em;
+}
+
+.detail-main-price {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-primary);
+  white-space: nowrap;
+}
+
+.detail-quick-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+.detail-quick-specs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+  flex-wrap: wrap;
+}
+
+.detail-quick-spec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.detail-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Screenshot #8 Aşağı Kaydırınca Sabitlenen (Sticky) Üst Bar */
+.detail-sticky-scroll-bar {
+  position: fixed;
+  top: var(--navbar-height);
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background-color: var(--color-bg-surface);
+  border-bottom: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-md);
+  padding: 10px 24px;
+  animation: modal-fade-in 0.15s ease-out;
+}
+
+.detail-sticky-scroll-inner {
+  max-width: 1420px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+/* Sağ Sabit Emlak Ofisi & Danışman Kartı (Screenshot #6) */
+.agency-side-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.agency-side-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text-dark);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.agency-side-title:hover {
+  color: var(--color-primary);
+}
+
+.advisor-side-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border-subtle);
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.ttbs-gray-box {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: var(--color-bg-surface-alt);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ttbs-gray-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-body);
+}
+
+.ttbs-gray-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.other-listing-mini-item {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.other-listing-mini-item:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.other-listing-mini-img {
+  width: 84px;
+  height: 64px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}

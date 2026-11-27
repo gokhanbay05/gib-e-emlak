@@ -1,0 +1,50 @@
+.card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.card-elevated {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-muted {
+  background-color: var(--color-bg-surface-alt);
+  border-color: var(--color-border-subtle);
+  box-shadow: none;
+}
+
+/* HepsiAI Akıllı Özet gradient çerçeveli özel kart */
+.card-ai-summary {
+  position: relative;
+  background: var(--gradient-ai-surface), var(--color-bg-surface);
+  border: 1.5px solid rgba(168, 85, 247, 0.45);
+  box-shadow: 0 4px 18px rgba(99, 102, 241, 0.08);
+}
+
+.card-interactive {
+  cursor: pointer;
+}
+
+.card-interactive:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-border);
+}
+
+.card-pad-none {
+  padding: 0;
+}
+
+.card-pad-sm {
+  padding: 12px 14px;
+}
+
+.card-pad-md {
+  padding: 18px 20px;
+}
+
+.card-pad-lg {
+  padding: 24px 28px;
+}

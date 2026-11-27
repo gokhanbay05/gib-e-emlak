@@ -57,3 +57,24 @@ export function loginAccount(
 export function fetchRegisteredUsers(): Promise<{ users: UserSession[] }> {
   return apiRequest<{ users: UserSession[] }>('/api/auth/users');
 }
+
+export function updateProfile(
+  userId: number,
+  payload: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+    current_password: string;
+    new_password?: string;
+  },
+): Promise<{ message: string; user: UserSession }> {
+  return apiRequest<{ message: string; user: UserSession }>(
+    `/api/auth/profile/${userId}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+}

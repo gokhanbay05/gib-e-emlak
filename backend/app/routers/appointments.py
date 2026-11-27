@@ -4,8 +4,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.models import Agency, Appointment, BlockedSlot, Customer, Property
-from app.schemas.appointment import BlockedSlotCreateRequest
+from app.models import Agency, Appointment, BlockedSlot, Customer, Property, User
+from app.schemas.appointment import (
+    AppointmentCreateRequest,
+    AppointmentUpdateRequest,
+    BlockedSlotCreateRequest,
+)
 
 router = APIRouter(
     prefix="/api/appointments",
@@ -328,3 +332,160 @@ def delete_blocked_slot(
         "message": "Manuel kapatılan saat dilimi tekrar müsait duruma getirildi.",
         "deleted_id": slot_id,
     }
+
+
+@router.post("", status_code=status.HTTP_201_CREATED)
+def create_appointment(
+    payload: AppointmentCreateRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Müşteri için seçilen emlak ofisi ve ilana randevu oluşturur."""
+    agency = db.get(Agency, payload.agency_id)
+    if agency is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Emlak ofisi bulunamadı.",
+        )
+
+    req_start = _ensure_utc(payload.start_time)
+    req_end = _ensure_utc(payload.end_time)
+    if req_end <= req_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Bitiş saati başlangıç saatinden sonra olmalıdır.",
+        )
+
+    # Çakışma kontrolü (Aktif randevular ve kapalı saatler)
+    active_appointments = list(
+        db.scalars(
+            select(Appointment).where(
+                Appointment.agency_id == payload.agency_id,
+                Appointment.status == "AKTIF",
+            )
+        ).all()
+    )
+    for existing in active_appointments:
+        if _ensure_utc(existing.start_time) < req_end and _ensure_utc(existing.end_time) > req_start:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Seçilen saat diliminde başka bir randevu bulunmaktadır. Lütfen farklı bir saat seçiniz.",
+            )
+
+    existing_slots = list(
+        db.scalars(
+            select(BlockedSlot).where(BlockedSlot.agency_id == payload.agency_id)
+        ).all()
+    )
+    for slot in existing_slots:
+        if _ensure_utc(slot.start_time) < req_end and _ensure_utc(slot.end_time) > req_start:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Seçilen saat dilimi emlak ofisi tarafından kapatılmıştır. Lütfen farklı bir saat seçiniz.",
+            )
+
+    customer_id: int | None = None
+    if payload.user_id:
+        u = db.get(User, payload.user_id)
+        if u and u.customer_id:
+            customer_id = u.customer_id
+
+    if customer_id is None:
+        parts = payload.customer_name.strip().split()
+        first_name = parts[0] if parts else "Müşteri"
+        last_name = " ".join(parts[1:]) if len(parts) > 1 else "Kaydı"
+        new_cust = Customer(
+            agency_id=payload.agency_id,
+            first_name=first_name,
+            last_name=last_name,
+            mobile_phone=payload.customer_phone.strip(),
+            customer_type="ALICI",
+            source="ONLINE_RANDEVU",
+            notes="İlan detay sayfasından randevu oluşturdu.",
+        )
+        db.add(new_cust)
+        db.flush()
+        customer_id = new_cust.id
+
+    appt = Appointment(
+        agency_id=payload.agency_id,
+        property_id=payload.property_id,
+        customer_id=customer_id,
+        appointment_type=payload.appointment_type or "FIZIKI",
+        purpose=payload.purpose or "ILAN_GOSTERIMI",
+        start_time=req_start,
+        end_time=req_end,
+        status="AKTIF",
+        meeting_notes=(payload.meeting_notes or "").strip(),
+    )
+    db.add(appt)
+    db.commit()
+    db.refresh(appt)
+
+    return {
+        "message": "Randevunuz başarıyla oluşturuldu.",
+        "appointment": serialize_appointment(appt, db),
+    }
+
+
+@router.post("/{appointment_id}/cancel")
+def cancel_appointment(
+    appointment_id: int,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Randevuyu iptal eder (Randevuya 6 saatten az kaldıysa iptal engellenir)."""
+    appt = db.get(Appointment, appointment_id)
+    if appt is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Randevu kaydı bulunamadı.",
+        )
+
+    start_utc = _ensure_utc(appt.start_time)
+    now_utc = datetime.now(timezone.utc)
+    hours_until = (start_utc - now_utc).total_seconds() / 3600.0
+    if hours_until < 6.0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Randevu saatine 6 saatten az kaldığı için online iptal yapılamaz. Lütfen emlak ofisi ile iletişime geçiniz.",
+        )
+
+    appt.status = "IPTAL_EDILDI"
+    appt.cancelled_at = now_utc
+    db.commit()
+    db.refresh(appt)
+    return {
+        "message": "Randevunuz iptal edildi.",
+        "appointment": serialize_appointment(appt, db),
+    }
+
+
+@router.patch("/{appointment_id}")
+def update_appointment_details(
+    appointment_id: int,
+    payload: AppointmentUpdateRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Takvim içinden randevu durumunu ve görüşme notunu günceller."""
+    appt = db.get(Appointment, appointment_id)
+    if appt is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Randevu kaydı bulunamadı.",
+        )
+
+    if payload.status and payload.status in {"AKTIF", "TAMAMLANDI", "IPTAL_EDILDI"}:
+        appt.status = payload.status
+        if payload.status == "IPTAL_EDILDI":
+            appt.cancelled_at = datetime.now(timezone.utc)
+
+    if payload.meeting_notes is not None:
+        appt.meeting_notes = payload.meeting_notes.strip()
+
+    db.commit()
+    db.refresh(appt)
+    return {
+        "message": "Randevu bilgileri güncellendi.",
+        "appointment": serialize_appointment(appt, db),
+    }
+
+

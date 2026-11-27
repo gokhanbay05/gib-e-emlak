@@ -1,0 +1,235 @@
+/* Hepsiemlak Screenshot #2 İmza Yatay İlan Kartı */
+.prop-h-card {
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.16s ease;
+}
+
+.prop-h-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-border);
+}
+
+.prop-h-media {
+  position: relative;
+  width: 100%;
+  height: 196px;
+  overflow: hidden;
+  background-color: var(--color-bg-muted);
+  cursor: pointer;
+}
+
+.prop-h-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.35s ease;
+}
+
+.prop-h-card:hover .prop-h-img {
+  transform: scale(1.04);
+}
+
+/* Fotoğraf Üstü Favori Kalp Butonu (Screenshot #2) */
+.prop-fav-overlay-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background-color: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.prop-fav-overlay-btn:hover {
+  background-color: rgba(15, 23, 42, 0.72);
+  transform: scale(1.08);
+}
+
+.prop-fav-overlay-btn.is-favorited {
+  background-color: #ffffff;
+  color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.prop-photo-count-pill {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(15, 23, 42, 0.65);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.prop-h-body {
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.prop-h-top-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prop-h-price {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-dark);
+}
+
+.prop-h-date {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.prop-h-title {
+  margin: 3px 0 0;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  cursor: pointer;
+  line-height: 1.35;
+  transition: color 0.15s ease;
+}
+
+.prop-h-title:hover {
+  color: var(--color-primary);
+}
+
+.prop-h-specs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 6px;
+  font-size: 13px;
+  color: var(--color-text-body);
+}
+
+.prop-h-spec-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.prop-h-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  font-size: 12.5px;
+  color: var(--color-text-muted);
+}
+
+.prop-h-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--color-border-subtle);
+  flex-wrap: wrap;
+}
+
+.prop-h-agency-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--color-text-dark);
+  text-align: left;
+}
+
+.prop-h-agency-btn:hover .prop-h-agency-name {
+  color: var(--color-primary);
+  text-decoration: underline;
+}
+
+.prop-h-agency-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+}
+
+.prop-h-advisor-sub {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.prop-h-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Vitrin (Grid) Görünümü Kartı */
+.prop-grid-card {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.prop-grid-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-border);
+  transform: translateY(-2px);
+}
+
+.prop-grid-media {
+  position: relative;
+  width: 100%;
+  height: 195px;
+  overflow: hidden;
+  background-color: var(--color-bg-muted);
+  cursor: pointer;
+}
+
+.prop-grid-body {
+  padding: 15px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .prop-h-card {
+    grid-template-columns: 1fr;
+  }
+  .prop-h-media {
+    height: 210px;
+  }
+}

@@ -15,7 +15,12 @@ from app.core.validators import (
     validate_ttbs_number,
 )
 from app.models import Agency, Customer, User
-from app.schemas.auth import LoginRequest, RegisterRequest, TTBSVerifyRequest
+from app.schemas.auth import (
+    LoginRequest,
+    ProfileUpdateRequest,
+    RegisterRequest,
+    TTBSVerifyRequest,
+)
 
 router = APIRouter(tags=["Kayıt, Giriş & TTBS Yetki Belgesi"])
 
@@ -258,3 +263,99 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
 def list_registered_users(db: Session = Depends(get_db)) -> dict:
     users = db.scalars(select(User).order_by(User.id)).all()
     return {"users": [serialize_user_session(u, db) for u in users]}
+
+
+@router.put("/api/auth/profile/{user_id}")
+def update_user_profile(
+    user_id: int,
+    payload: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+) -> dict:
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Kullanıcı hesabı bulunamadı.",
+        )
+
+    field_errors: dict[str, str] = {}
+
+    if not payload.current_password or not payload.current_password.strip():
+        field_errors["current_password"] = (
+            "Bilgilerinizi güncellemek için mevcut şifrenizi girmelisiniz."
+        )
+    else:
+        is_demo_hash = user.password_hash.startswith("demo_hash_")
+        pwd_matches = (
+            payload.current_password == "123456"
+            if is_demo_hash
+            else user.password_hash == hash_password(payload.current_password)
+        )
+        if not pwd_matches:
+            field_errors["current_password"] = "Mevcut şifreniz hatalı."
+
+    if payload.new_password and payload.new_password.strip():
+        pwd_ok, pwd_err = validate_password_strength(payload.new_password)
+        if not pwd_ok:
+            field_errors["new_password"] = pwd_err
+
+    first_name = payload.first_name.strip()
+    last_name = payload.last_name.strip()
+    if len(first_name) < 2 or DIGIT_RE.search(first_name):
+        field_errors["first_name"] = "Ad en az 2 harf olmalı ve rakam içermemelidir."
+    if len(last_name) < 2 or DIGIT_RE.search(last_name):
+        field_errors["last_name"] = "Soyad en az 2 harf olmalı ve rakam içermemelidir."
+
+    normalized_email = payload.email.strip().lower()
+    if not EMAIL_RE.match(normalized_email):
+        field_errors["email"] = "Lütfen geçerli bir e-posta adresi giriniz."
+    else:
+        dup = db.scalar(
+            select(User).where(
+                func.lower(User.email) == normalized_email, User.id != user.id
+            )
+        )
+        if dup is not None:
+            field_errors["email"] = "Bu e-posta adresi başka bir hesap tarafından kullanılıyor."
+
+    phone_ok, formatted_phone, phone_err = normalize_and_validate_phone(
+        payload.phone, is_mobile=True
+    )
+    if not phone_ok:
+        field_errors["phone"] = phone_err
+
+    if field_errors:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "message": next(iter(field_errors.values())),
+                "field_errors": field_errors,
+            },
+        )
+
+    user.full_name = f"{first_name} {last_name}"
+    user.email = normalized_email
+    user.phone = formatted_phone
+    if payload.new_password and payload.new_password.strip():
+        user.password_hash = hash_password(payload.new_password.strip())
+
+    if user.customer_id:
+        cust = db.get(Customer, user.customer_id)
+        if cust:
+            cust.first_name = first_name
+            cust.last_name = last_name
+            cust.email = normalized_email
+            cust.mobile_phone = formatted_phone
+
+    if user.agency_id:
+        ag = db.get(Agency, user.agency_id)
+        if ag:
+            ag.authorized_person = user.full_name
+            ag.mobile_phone = formatted_phone
+
+    db.commit()
+    db.refresh(user)
+    return {
+        "message": "Profil bilgileriniz güncellendi.",
+        "user": serialize_user_session(user, db),
+    }

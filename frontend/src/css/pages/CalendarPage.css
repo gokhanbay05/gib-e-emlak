@@ -1,0 +1,188 @@
+/* macOS Apple Calendar Tam Sayfa 7 Sütunlu Aylık / Haftalık Takvim Izgarası */
+.apple-cal-card {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.apple-cal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 22px;
+  border-bottom: 1px solid var(--color-border-default);
+  flex-wrap: wrap;
+}
+
+.apple-cal-month-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--color-text-dark);
+}
+
+.apple-cal-month-title span {
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+.apple-cal-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-bottom: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface-alt);
+}
+
+.apple-cal-weekday-cell {
+  padding: 10px 12px;
+  text-align: right;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+.apple-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-auto-rows: minmax(128px, auto);
+}
+
+.apple-cal-day-cell {
+  border-right: 1px solid var(--color-border-default);
+  border-bottom: 1px solid var(--color-border-default);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  cursor: pointer;
+  transition: background-color 0.14s ease;
+}
+
+.apple-cal-day-cell:nth-child(7n) {
+  border-right: none;
+}
+
+.apple-cal-day-cell:hover {
+  background-color: var(--color-bg-hover);
+}
+
+.apple-cal-day-cell.is-outside-month {
+  background-color: var(--color-bg-surface-alt);
+  opacity: 0.55;
+}
+
+.apple-cal-day-cell.is-weekend {
+  background-color: rgba(148, 163, 184, 0.04);
+}
+
+.apple-cal-day-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2px;
+}
+
+.apple-cal-day-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-text-dark);
+  margin-left: auto;
+}
+
+.apple-cal-day-num.is-today {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
+/* Gün Hücresi İçindeki Renkli Randevu ve Kapalı Saat Hapları (Apple Calendar Event Pills) */
+.apple-cal-events-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apple-cal-event-pill {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.apple-cal-event-pill:hover {
+  transform: scale(1.015);
+}
+
+.apple-cal-event-pill.type-active {
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-left: 3px solid #2563eb;
+}
+
+.dark .apple-cal-event-pill.type-active {
+  background-color: rgba(37, 99, 235, 0.25);
+  color: #93c5fd;
+}
+
+.apple-cal-event-pill.type-completed {
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-left: 3px solid #16a34a;
+}
+
+.apple-cal-event-pill.type-cancelled {
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+.apple-cal-event-pill.type-blocked {
+  background-color: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  border-left: 3px solid #d97706;
+}
+
+.apple-cal-event-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.apple-cal-event-time {
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .apple-cal-grid {
+    grid-auto-rows: minmax(90px, auto);
+  }
+  .apple-cal-event-pill {
+    font-size: 10px;
+    padding: 2px 5px;
+  }
+}

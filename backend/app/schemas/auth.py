@@ -28,3 +28,14 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    first_name: str = Field(..., description="Ad")
+    last_name: str = Field(..., description="Soyad")
+    email: str = Field(..., description="E-posta")
+    phone: str = Field(..., description="Cep Telefonu")
+    current_password: str = Field(..., description="Onay için mevcut şifre")
+    new_password: str | None = Field(
+        default=None, description="Opsiyonel yeni şifre"
+    )

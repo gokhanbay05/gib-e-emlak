@@ -264,3 +264,24 @@ export function buildPropertyPrintSheetUrl(
   qs.set('auto_print', autoPrint ? '1' : '0');
   return `/api/properties/${propertyId}/print-sheet?${qs.toString()}`;
 }
+
+export interface AiRecommendationItem {
+  property: PropertyRecord;
+  score: number;
+  explanation: string;
+  highlights: string[];
+}
+
+export function fetchAiPropertyRecommendations(prompt: string): Promise<{
+  engine: string;
+  recommendations: AiRecommendationItem[];
+}> {
+  return apiRequest<{
+    engine: string;
+    recommendations: AiRecommendationItem[];
+  }>('/api/properties/ai-recommend', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt }),
+  });
+}

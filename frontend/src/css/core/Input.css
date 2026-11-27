@@ -1,0 +1,106 @@
+.input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.input-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-body);
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-icon-left {
+  position: absolute;
+  left: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.input-right-element {
+  position: absolute;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input-field {
+  width: 100%;
+  height: 40px;
+  padding: 0 13px;
+  font-size: 13.5px;
+  color: var(--color-text-dark);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.input-field::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.input-field:focus {
+  border-color: var(--color-border-focus);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.input-field:disabled {
+  background-color: var(--color-bg-muted);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.input-field.input-pill {
+  border-radius: var(--radius-pill);
+}
+
+.input-field.input-lg {
+  height: 46px;
+  font-size: 14px;
+}
+
+.input-field.input-sm {
+  height: 34px;
+  font-size: 12.5px;
+  padding: 0 10px;
+}
+
+.input-field.input-has-icon-left {
+  padding-left: 38px;
+}
+
+.input-field.input-has-right {
+  padding-right: 44px;
+}
+
+.input-field.has-error {
+  border-color: var(--color-danger-text);
+}
+
+.input-textarea {
+  height: auto;
+  min-height: 88px;
+  padding: 10px 13px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.input-error-text {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--color-danger-text);
+}

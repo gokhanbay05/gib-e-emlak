@@ -1,0 +1,213 @@
+:root {
+  /* Hepsiemlak & Apple Calendar Light Theme Tokens */
+  --color-bg-page: #f5f6f8;
+  --color-bg-surface: #ffffff;
+  --color-bg-surface-alt: #f8fafc;
+  --color-bg-muted: #f1f5f9;
+  --color-bg-hover: #f1f5f9;
+
+  /* Primary Brand (Hepsiemlak Coral / Crimson) */
+  --color-primary: #e11d48;
+  --color-primary-hover: #be123c;
+  --color-primary-soft: #fff1f2;
+  --color-primary-border: #fecdd3;
+
+  /* Secondary Corporate Accent (Slate / Navy) */
+  --color-secondary: #0f172a;
+  --color-secondary-hover: #1e293b;
+  --color-secondary-soft: #f1f5f9;
+
+  /* AI / Sparkle Accent (HepsiAI Purple-Blue-Coral) */
+  --color-ai-accent: #6366f1;
+  --color-ai-soft: #eef2ff;
+  --gradient-ai-border: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
+  --gradient-ai-surface: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(236, 72, 153, 0.06) 100%);
+
+  /* Semantic Status Colors */
+  --color-verified: #2563eb;
+  --color-verified-soft: #eff6ff;
+
+  --color-whatsapp: #16a34a;
+  --color-whatsapp-soft: #f0fdf4;
+  --color-whatsapp-border: #bbf7d0;
+
+  --color-success-bg: #dcfce7;
+  --color-success-text: #15803d;
+  --color-success-border: #bbf7d0;
+
+  --color-warning-bg: #fef3c7;
+  --color-warning-text: #b45309;
+  --color-warning-border: #fde68a;
+
+  --color-danger-bg: #fee2e2;
+  --color-danger-text: #b91c1c;
+  --color-danger-border: #fecaca;
+
+  /* Typography Colors */
+  --color-text-dark: #0f172a;
+  --color-text-body: #334155;
+  --color-text-muted: #64748b;
+  --color-text-subtle: #94a3b8;
+  --color-text-light: #ffffff;
+
+  /* Borders & Shadows */
+  --color-border-default: #e2e8f0;
+  --color-border-subtle: #f1f5f9;
+  --color-border-focus: #e11d48;
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 9999px;
+
+  /* Layout Constants */
+  --navbar-height: 68px;
+}
+
+.dark {
+  --color-bg-page: #0b0f17;
+  --color-bg-surface: #151c28;
+  --color-bg-surface-alt: #1c2536;
+  --color-bg-muted: #232e42;
+  --color-bg-hover: #263248;
+
+  --color-primary: #f43f5e;
+  --color-primary-hover: #e11d48;
+  --color-primary-soft: rgba(244, 63, 94, 0.15);
+  --color-primary-border: rgba(244, 63, 94, 0.35);
+
+  --color-secondary: #f8fafc;
+  --color-secondary-hover: #e2e8f0;
+  --color-secondary-soft: #1e293b;
+
+  --color-ai-accent: #818cf8;
+  --color-ai-soft: rgba(129, 140, 248, 0.14);
+
+  --color-verified: #60a5fa;
+  --color-verified-soft: rgba(96, 165, 250, 0.15);
+
+  --color-whatsapp: #4ade80;
+  --color-whatsapp-soft: rgba(74, 222, 128, 0.12);
+  --color-whatsapp-border: rgba(74, 222, 128, 0.3);
+
+  --color-success-bg: rgba(22, 163, 74, 0.18);
+  --color-success-text: #4ade80;
+  --color-success-border: rgba(74, 222, 128, 0.3);
+
+  --color-warning-bg: rgba(217, 119, 6, 0.18);
+  --color-warning-text: #fbbf24;
+  --color-warning-border: rgba(251, 191, 36, 0.3);
+
+  --color-danger-bg: rgba(220, 38, 38, 0.2);
+  --color-danger-text: #f87171;
+  --color-danger-border: rgba(248, 113, 113, 0.35);
+
+  --color-text-dark: #f8fafc;
+  --color-text-body: #cbd5e1;
+  --color-text-muted: #94a3b8;
+  --color-text-subtle: #64748b;
+  --color-text-light: #ffffff;
+
+  --color-border-default: #293548;
+  --color-border-subtle: #1e293b;
+  --color-border-focus: #f43f5e;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.65);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--color-bg-page);
+  color: var(--color-text-dark);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-default);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-muted);
+}
+
+/* Global Toast Banner */
+.app-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-secondary);
+  color: var(--color-bg-surface);
+  font-weight: 600;
+  font-size: 13px;
+  box-shadow: var(--shadow-lg);
+  animation: toast-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.app-toast-error {
+  background-color: #b91c1c;
+  color: #ffffff;
+}
+
+@keyframes toast-slide-up {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}

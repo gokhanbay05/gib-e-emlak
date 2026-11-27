@@ -113,6 +113,9 @@ export interface CustomerOwnedProperty {
   status: string;
   is_owner_id_verified: boolean;
   image_url: string;
+  images?: string[];
+  latitude?: number;
+  longitude?: number;
   created_at: string;
 }
 
@@ -237,6 +240,9 @@ export interface PropertyRecord {
   status: PropertyStatus;
   is_owner_id_verified: boolean;
   image_url: string;
+  images?: string[];
+  latitude?: number;
+  longitude?: number;
   created_at: string;
   owner: PropertyOwnerSummary | null;
   agency?: PropertyAgencySummary | null;
@@ -320,6 +326,7 @@ export interface SystemOverview {
 
 export type NavDestination =
   | 'agency'
+  | 'agency-storefront'
   | 'customers'
   | 'properties'
   | 'search'
@@ -327,7 +334,9 @@ export type NavDestination =
   | 'ai-match'
   | 'reports'
   | 'marketplace'
+  | 'property-detail'
   | 'sell-request'
+  | 'profile'
   | 'auth'
   | 'system';
 

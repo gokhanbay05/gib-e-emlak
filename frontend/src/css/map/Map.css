@@ -1,0 +1,157 @@
+.slippy-map-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 580px;
+  overflow: hidden;
+  background-color: #dbeafe;
+  user-select: none;
+  cursor: grab;
+}
+
+.slippy-map-wrapper:active {
+  cursor: grabbing;
+}
+
+.slippy-tile-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.slippy-tile-img {
+  position: absolute;
+  width: 256px;
+  height: 256px;
+  user-select: none;
+  pointer-events: none;
+}
+
+/* Hepsiemlak Screenshot #4 Kırmızı Çerçeveli Yuvarlak Cluster Balonu */
+.hepsi-cluster-marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.96);
+  border: 2.5px solid var(--color-primary);
+  color: var(--color-primary);
+  font-weight: 800;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
+  z-index: 10;
+}
+
+.hepsi-cluster-marker:hover {
+  transform: translate(-50%, -50%) scale(1.12);
+  background-color: var(--color-primary);
+  color: #ffffff;
+  z-index: 30;
+}
+
+/* Tekil İlan Fiyat Pini */
+.hepsi-price-pin {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-bg-surface);
+  border: 2px solid var(--color-primary);
+  color: var(--color-text-dark);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  z-index: 15;
+}
+
+.hepsi-price-pin::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 5px 0;
+  border-style: solid;
+  border-color: var(--color-primary) transparent transparent;
+}
+
+.hepsi-price-pin:hover,
+.hepsi-price-pin.is-active {
+  background-color: var(--color-primary);
+  color: #ffffff;
+  transform: translate(-50%, -100%) scale(1.08);
+  z-index: 35;
+}
+
+/* Sağ Üst Zoom & Sıfırlama Kontrolleri */
+.slippy-map-controls {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.slippy-ctrl-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-default);
+  background-color: var(--color-bg-surface);
+  color: var(--color-text-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.slippy-ctrl-btn:hover {
+  background-color: var(--color-bg-hover);
+  color: var(--color-primary);
+}
+
+/* Sol Üst Görünür Alan Sayacı */
+.slippy-bounds-pill {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  z-index: 40;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-md);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-text-dark);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Harita Üzerinde Seçili İlan Önizleme Kartı */
+.slippy-preview-card {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  z-index: 45;
+  width: 360px;
+  max-width: calc(100% - 40px);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: modal-pop-in 0.16s ease-out;
+}
