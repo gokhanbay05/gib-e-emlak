@@ -16,9 +16,9 @@ GitHub (main push)
 
 Ev / NAS Sunucusu (docker-compose.prod.yml — Sıfır Açık Port)
    ├─ watchtower  ──(her 5 dk)──▶ sadece backend & frontend imajlarını günceller
-   ├─ cloudflared ──(outbound)──▶ Cloudflare Zero Trust Tüneli
-   │                                 └─▶ Public Hostname: http://frontend:80
-   ├─ frontend (Nginx) ──▶ React SPA + /api/* & /uploads/* → http://backend:8000
+   ├─ cloudflared ──(host net)──▶ Cloudflare Zero Trust Tüneli
+   │                                 └─▶ Public Hostname: http://127.0.0.1:18080
+   ├─ frontend (Nginx, 127.0.0.1:18080) ──▶ React SPA + /api/* & /uploads/* → http://backend:8000
    ├─ backend (FastAPI/Uvicorn) ──▶ postgres:5432 + gib_backend_uploads volume
    └─ postgres:16-alpine ──▶ gib_postgres_data volume (Watchtower dışı)
 ```
@@ -51,7 +51,7 @@ Ev / NAS Sunucusu (docker-compose.prod.yml — Sıfır Açık Port)
 4. Tünelin **Public Hostname** sekmesine gir → **Add a public hostname**:
    - **Subdomain / Domain:** `emlak.senindomainin.com`
    - **Service Type:** `HTTP`
-   - **URL:** `frontend:80`
+   - **URL:** `127.0.0.1:18080`
 5. Kaydet. Artık modemde port yönlendirmesi (port forwarding) yapmana gerek yok.
 
 ---
