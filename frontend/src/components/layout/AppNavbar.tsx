@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion } from 'framer-motion';
 import {
   BarChart3,
   Building2,
@@ -8,7 +9,7 @@ import {
   Home,
   KeyRound,
   LogOut,
-  Menu,
+  MessageCircle,
   Moon,
   Plus,
   Search,
@@ -18,52 +19,71 @@ import {
   Sun,
   User,
   Users,
+  X,
 } from 'lucide-react';
 import type { NavDestination, UserSession } from '../../types';
 import type { AuthTabKey, ProfileTabKey } from '../../lib/router';
 import { cn } from '../../lib/utils';
-import { Avatar, Button, Modal } from '../core';
+import { Avatar, Button } from '../core';
 import '../../css/layout/AppNavbar.css';
 
 export interface AppNavbarProps {
   activePage: NavDestination;
   listingType: 'ALL' | 'SATILIK' | 'KIRALIK';
+  isHomeHeroMode: boolean;
   session: UserSession;
   colorScheme: 'light' | 'dark';
   searchQuery: string;
-  onSearchQueryChange: (q: string) => void;
-  onSearchSubmit: () => void;
+  onSearchSubmit: (submittedText: string) => void;
   onToggleColorScheme: () => void;
   onNavigate: (
     page: NavDestination,
     opts?: {
-      listingType?: 'ALL' | 'SATILIK' | 'KIRALIK';
       profileTab?: ProfileTabKey;
       authTab?: AuthTabKey;
-      agencyId?: number;
+      listingType?: 'ALL' | 'SATILIK' | 'KIRALIK';
+      agencyId?: number | null;
+      searchQuery?: string;
     },
   ) => void;
   onLogout: () => void;
 }
 
+interface NavLinkDef {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  active: boolean;
+  onClick: () => void;
+}
+
 export function AppNavbar({
   activePage,
   listingType,
+  isHomeHeroMode,
   session,
   colorScheme,
   searchQuery,
-  onSearchQueryChange,
   onSearchSubmit,
   onToggleColorScheme,
   onNavigate,
   onLogout,
 }: AppNavbarProps) {
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [draftSearch, setDraftSearch] = useState(searchQuery);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   const isVisitor = session.role === 'VISITOR';
   const isAgent = session.role === 'AGENT';
+
+  useEffect(() => {
+    setDraftSearch(searchQuery);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    setMobileSearchOpen(false);
+  }, [activePage, listingType]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -79,606 +99,550 @@ export function AppNavbar({
   }, []);
 
   const showTopSearchBar =
-    activePage === 'marketplace' ||
-    activePage === 'property-detail' ||
-    activePage === 'agency-storefront' ||
-    activePage === 'properties' ||
-    activePage === 'customers' ||
-    activePage === 'search';
+    !isHomeHeroMode &&
+    (activePage === 'marketplace' ||
+      activePage === 'property-detail');
+
+  const navItems: NavLinkDef[] = isAgent
+    ? [
+        {
+          id: 'agent-vitrin',
+          label: 'Vitrin',
+          icon: <Home size={16} />,
+          active: activePage === 'marketplace',
+          onClick: () =>
+            onNavigate('marketplace', {
+              listingType: 'ALL',
+              searchQuery: '',
+            }),
+        },
+        {
+          id: 'agent-props',
+          label: 'Portföy Yönetimi',
+          icon: <Building2 size={16} />,
+          active: activePage === 'properties',
+          onClick: () => onNavigate('properties', { searchQuery: '' }),
+        },
+        {
+          id: 'agent-cal',
+          label: 'Randevu Takvimi',
+          icon: <Calendar size={16} />,
+          active: activePage === 'calendar',
+          onClick: () => onNavigate('calendar', { searchQuery: '' }),
+        },
+        {
+          id: 'agent-cust',
+          label: 'Müşteriler',
+          icon: <Users size={16} />,
+          active: activePage === 'customers',
+          onClick: () => onNavigate('customers', { searchQuery: '' }),
+        },
+        {
+          id: 'agent-reports',
+          label: 'Analitik',
+          icon: <BarChart3 size={16} />,
+          active: activePage === 'reports',
+          onClick: () => onNavigate('reports', { searchQuery: '' }),
+        },
+      ]
+    : [
+        {
+          id: 'pub-home',
+          label: 'Ana Sayfa',
+          icon: <Home size={16} />,
+          active:
+            activePage === 'marketplace' &&
+            listingType === 'ALL' &&
+            !searchQuery,
+          onClick: () =>
+            onNavigate('marketplace', {
+              listingType: 'ALL',
+              searchQuery: '',
+            }),
+        },
+        {
+          id: 'pub-sale',
+          label: 'Satılık',
+          icon: <Building2 size={16} />,
+          active: activePage === 'marketplace' && listingType === 'SATILIK',
+          onClick: () =>
+            onNavigate('marketplace', {
+              listingType: 'SATILIK',
+              searchQuery: '',
+            }),
+        },
+        {
+          id: 'pub-rent',
+          label: 'Kiralık',
+          icon: <KeyRound size={16} />,
+          active: activePage === 'marketplace' && listingType === 'KIRALIK',
+          onClick: () =>
+            onNavigate('marketplace', {
+              listingType: 'KIRALIK',
+              searchQuery: '',
+            }),
+        },
+        {
+          id: 'pub-agencies',
+          label: 'Emlak Ofisleri',
+          icon: <Store size={16} />,
+          active:
+            activePage === 'agencies-directory' ||
+            activePage === 'agency-storefront',
+          onClick: () => onNavigate('agencies-directory', { searchQuery: '' }),
+        },
+      ];
 
   return (
     <>
       <header className="app-navbar">
         <div className="app-navbar-inner">
-          {/* Sol: Hepsiemlak Tarzı Marka Linki */}
-          <button
-            type="button"
-            className="brand-logo-link"
-            onClick={() =>
-              onNavigate('marketplace', { listingType: 'ALL' })
-            }
-          >
-            <span className="brand-roof-mark">
-              <Home size={18} strokeWidth={2.4} />
-            </span>
-            <span className="brand-logo-text">
-              GİB <span>e-Emlak</span>
-            </span>
-            <span className="brand-logo-badge">RESMİ</span>
-          </button>
-
-          {/* Orta-Sol: Rol Bazlı Navigasyon Linkleri */}
-          <nav className="navbar-links" aria-label="Ana menü">
-            {isAgent ? (
-              <>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'marketplace' && 'is-active',
-                  )}
-                  onClick={() =>
-                    onNavigate('marketplace', { listingType: 'ALL' })
-                  }
-                >
-                  <Home size={15} />
-                  <span>Vitrin</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'properties' && 'is-active',
-                  )}
-                  onClick={() => onNavigate('properties')}
-                >
-                  <Building2 size={15} />
-                  <span>Portföy Yönetimi</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'calendar' && 'is-active',
-                  )}
-                  onClick={() => onNavigate('calendar')}
-                >
-                  <Calendar size={15} />
-                  <span>Randevu Takvimi</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'customers' && 'is-active',
-                  )}
-                  onClick={() => onNavigate('customers')}
-                >
-                  <Users size={15} />
-                  <span>Müşteriler</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'agency' && 'is-active',
-                  )}
-                  onClick={() => onNavigate('agency')}
-                >
-                  <Store size={15} />
-                  <span>Ofis & Danışmanlar</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'reports' && 'is-active',
-                  )}
-                  onClick={() => onNavigate('reports')}
-                >
-                  <BarChart3 size={15} />
-                  <span>Analitik</span>
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'marketplace' &&
-                      listingType === 'SATILIK' &&
-                      'is-active',
-                  )}
-                  onClick={() =>
-                    onNavigate('marketplace', { listingType: 'SATILIK' })
-                  }
-                >
-                  <Home size={15} />
-                  <span>Satılık</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'marketplace' &&
-                      listingType === 'KIRALIK' &&
-                      'is-active',
-                  )}
-                  onClick={() =>
-                    onNavigate('marketplace', { listingType: 'KIRALIK' })
-                  }
-                >
-                  <KeyRound size={15} />
-                  <span>Kiralık</span>
-                </button>
-                <button
-                  type="button"
-                  className={cn(
-                    'navbar-link-item',
-                    activePage === 'agency-storefront' && 'is-active',
-                  )}
-                  onClick={() =>
-                    onNavigate('agency-storefront', { agencyId: 1 })
-                  }
-                >
-                  <Users size={15} />
-                  <span>Danışmanlar & Ofisler</span>
-                </button>
-              </>
-            )}
-          </nav>
-
-          {/* Orta: Hepsiemlak Yuvarlak Arama Çubuğu */}
-          {showTopSearchBar && (
-            <div className="navbar-search-wrap">
-              <form
-                className="navbar-search-box"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  onSearchSubmit();
-                }}
-              >
-                <span className="navbar-search-sparkle">
-                  <Sparkles size={15} />
-                </span>
-                <input
-                  type="text"
-                  className="navbar-search-input"
-                  placeholder={
-                    activePage === 'customers'
-                      ? 'Müşteri adı, telefon veya T.C. ile arayın...'
-                      : 'Konum, ilan no ya da emlak ofisi adıyla arayın...'
-                  }
-                  value={searchQuery}
-                  onChange={(e) => onSearchQueryChange(e.target.value)}
-                />
-                <button
-                  type="submit"
-                  className="navbar-search-btn"
-                  aria-label="Ara"
-                >
-                  <Search size={16} />
-                </button>
-              </form>
-            </div>
-          )}
-
-          {/* Sağ: Tema İkonu + Screenshot #5 Kullanıcı Popover + Ana CTA */}
-          <div className="navbar-actions">
-            <Button
-              variant="ghost"
-              size="icon"
-              pill
-              onClick={onToggleColorScheme}
-              aria-label={
-                colorScheme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'
-              }
-              title={
-                colorScheme === 'dark' ? 'Açık Temaya Geç' : 'Koyu Temaya Geç'
+          {/* Sol Küme: Çizimdeki Mimari GİB [e-emlak] Logosu + İkon/Yazı Menüleri */}
+          <div className="navbar-left-cluster">
+            <button
+              type="button"
+              className="brand-logo-link"
+              onClick={() =>
+                onNavigate('marketplace', {
+                  listingType: 'ALL',
+                  searchQuery: '',
+                })
               }
             >
-              {colorScheme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-            </Button>
+              <span className="brand-gib-text">GİB</span>
+              <span className="brand-eemlak-box">e-emlak</span>
+            </button>
 
-            {/* Kullanıcı / Giriş Yap Popover Menüsü (Screenshot #5) */}
-            <div className="user-popover-anchor" ref={popoverRef}>
-              {isVisitor ? (
-                <button
-                  type="button"
-                  className="user-trigger-pill"
-                  onClick={() => setPopoverOpen((v) => !v)}
-                >
-                  <div className="user-trigger-text">
-                    <span className="user-trigger-top">Giriş Yap</span>
-                    <span className="user-trigger-bottom">veya Üye Ol</span>
-                  </div>
-                  <User size={18} />
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="user-trigger-pill"
-                  onClick={() => setPopoverOpen((v) => !v)}
-                  title={session.full_name}
-                >
-                  <Avatar name={session.full_name} size="sm" />
-                  <div className="user-trigger-text">
-                    <span className="user-trigger-top">
-                      {isAgent ? 'Kurumsal' : 'Profilim'}
+            <LayoutGroup id="navbar-active-tabs">
+              <nav className="navbar-links" aria-label="Ana menü">
+                {navItems.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={cn(
+                      'navbar-link-item',
+                      item.active && 'is-active',
+                    )}
+                    onClick={item.onClick}
+                    title={item.label}
+                    aria-label={item.label}
+                  >
+                    {item.active && (
+                      <motion.span
+                        layoutId="navbar-active-pill"
+                        className="navbar-active-pill-bg"
+                        transition={{
+                          type: 'spring',
+                          stiffness: 340,
+                          damping: 28,
+                          mass: 0.85,
+                        }}
+                      />
+                    )}
+                    <span className="navbar-link-content">
+                      {item.icon}
+                      <span className="navbar-link-label">{item.label}</span>
                     </span>
-                    <span
-                      className="user-trigger-bottom"
-                      style={{ color: 'var(--color-text-dark)' }}
+                  </button>
+                ))}
+              </nav>
+            </LayoutGroup>
+          </div>
+
+          {/* Orta Sabit Slot (Masaüstü Arama Çubuğu) */}
+          <div className="navbar-center-slot">
+            <AnimatePresence initial={false}>
+              {showTopSearchBar && (
+                <motion.div
+                  key="navbar-search"
+                  initial={{ opacity: 0, maxWidth: 0, scale: 0.88, y: -4 }}
+                  animate={{ opacity: 1, maxWidth: 400, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, maxWidth: 0, scale: 0.88, y: -4 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  className="navbar-search-wrap"
+                  style={{ overflow: 'hidden', originX: 0.5 }}
+                >
+                  <form
+                    className="navbar-search-box"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      onSearchSubmit(draftSearch);
+                    }}
+                  >
+                    <span className="navbar-search-sparkle">
+                      <Sparkles size={15} />
+                    </span>
+                    <input
+                      type="text"
+                      className="navbar-search-input"
+                      placeholder="Kelime veya konum yazıp Ara'ya basın..."
+                      value={draftSearch}
+                      onChange={(e) => setDraftSearch(e.target.value)}
+                    />
+                    <button
+                      type="submit"
+                      className="navbar-search-btn"
+                      aria-label="Ara"
+                      title="Ara"
                     >
-                      {session.full_name.split(' ')[0]}
-                    </span>
-                  </div>
-                </button>
+                      <Search size={16} />
+                    </button>
+                  </form>
+                </motion.div>
               )}
+            </AnimatePresence>
+          </div>
+
+          {/* Sağ Aksiyonlar: [Mobil Arama İkonu] + [Sat/İlan Ekle] + [En Sağda PP Avatar & Tema Menüsü] */}
+          <div className="navbar-actions">
+            {showTopSearchBar && (
+              <button
+                type="button"
+                className={cn(
+                  'mobile-search-toggle-btn',
+                  mobileSearchOpen && 'is-open',
+                )}
+                onClick={() => setMobileSearchOpen((v) => !v)}
+                aria-label="Arama Çubuğunu Aç"
+                title="Ara"
+              >
+                {mobileSearchOpen ? <X size={17} /> : <Search size={17} />}
+              </button>
+            )}
+
+            {!isAgent && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="navbar-cta-btn"
+                leftIcon={<Plus size={16} />}
+                onClick={() => onNavigate('sell-request')}
+                title="Evini Sat / Kiraya Ver"
+              >
+                <span className="nav-cta-text">Evini Sat / Kiraya Ver</span>
+              </Button>
+            )}
+
+            {/* En Sağda PP / Hesap Tetikleyici (Popover menüsü sağa hizalı olduğu için ekran dışına taşmaz) */}
+            <div className="user-popover-anchor" ref={popoverRef}>
+              <button
+                type="button"
+                className="user-trigger-pill"
+                onClick={() => setPopoverOpen((v) => !v)}
+                title={isVisitor ? 'Giriş Yap & Tema' : session.full_name}
+              >
+                {isVisitor ? (
+                  <User size={17} />
+                ) : (
+                  <Avatar
+                    src={session.avatar_url}
+                    name={session.full_name}
+                    size="sm"
+                  />
+                )}
+                <span
+                  className="user-trigger-label"
+                  style={{ fontWeight: 700, fontSize: '13px' }}
+                >
+                  {isVisitor ? 'Giriş / Üye Ol' : 'Profilim'}
+                </span>
+              </button>
 
               {popoverOpen && (
                 <div className="user-popover-card">
+                  {!isAgent && (
+                    <button
+                      type="button"
+                      className="user-popover-cta-btn"
+                      onClick={() => {
+                        setPopoverOpen(false);
+                        onNavigate('sell-request');
+                      }}
+                    >
+                      <Plus size={15} />
+                      <span>Evini Sat / Kiraya Ver</span>
+                    </button>
+                  )}
                   {isVisitor ? (
-                    <>
-                      <Button
-                        variant="primary"
-                        pill
-                        fullWidth
+                    <div className="user-popover-list">
+                      <button
+                        type="button"
+                        className="user-popover-item"
                         onClick={() => {
                           setPopoverOpen(false);
                           onNavigate('auth', { authTab: 'login' });
                         }}
                       >
-                        Üye Girişi
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        fullWidth
+                        <User size={15} />
+                        <span>Üye Girişi Yap</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="user-popover-item"
                         onClick={() => {
                           setPopoverOpen(false);
                           onNavigate('auth', { authTab: 'register-customer' });
                         }}
                       >
-                        GİB e-Emlak'a Üye Ol
-                      </Button>
+                        <Plus size={15} />
+                        <span>Yeni Hesap Oluştur</span>
+                      </button>
                       <div className="user-popover-divider" />
-                      <div className="user-popover-list">
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('auth', { authTab: 'login' });
-                          }}
-                        >
-                          <Heart size={15} />
-                          <span>Favorilerim</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('auth', { authTab: 'login' });
-                          }}
-                        >
-                          <Calendar size={15} />
-                          <span>Randevularım</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('sell-request');
-                          }}
-                        >
-                          <FileText size={15} />
-                          <span>Ev Satış / Kiralama Başvurusu</span>
-                        </button>
-                        <div className="user-popover-divider" />
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('auth', { authTab: 'register-agent' });
-                          }}
-                        >
-                          <Building2 size={15} />
-                          <span>Kurumsal Ofis Üyeliği</span>
-                        </button>
-                      </div>
-                    </>
-                  ) : isAgent ? (
-                    /* Emlakçı (AGENT) Menüsü: Navbar menülerini tekrar etmez, müşteri favori/randevusu içermez */
+                      <button
+                        type="button"
+                        className="user-popover-item"
+                        onClick={onToggleColorScheme}
+                      >
+                        {colorScheme === 'dark' ? (
+                          <Sun size={15} />
+                        ) : (
+                          <Moon size={15} />
+                        )}
+                        <span>
+                          Tema:{' '}
+                          {colorScheme === 'dark'
+                            ? 'Açık Görünüme Geç'
+                            : 'Koyu Görünüme Geç'}
+                        </span>
+                      </button>
+                    </div>
+                  ) : (
                     <>
                       <div className="user-popover-header">
                         <div className="user-popover-name">
                           {session.full_name}
                         </div>
                         <div className="user-popover-role">
-                          {session.agency?.name ?? 'Kurumsal Emlak Ofisi'}
+                          {isAgent
+                            ? session.agency?.name ?? 'Kurumsal Emlak Ofisi'
+                            : 'Bireysel Üye'}
                         </div>
                       </div>
-                      <div className="user-popover-list">
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('profile', { profileTab: 'security' });
-                          }}
-                        >
-                          <ShieldCheck size={15} />
-                          <span>Profilim & Hesap Ayarları</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('agency-storefront', {
-                              agencyId: session.agency?.id ?? 1,
-                            });
-                          }}
-                        >
-                          <Store size={15} />
-                          <span>Kurumsal Mağaza Vitrinim</span>
-                        </button>
-                        <div className="user-popover-divider" />
-                        <button
-                          type="button"
-                          className="user-popover-item is-danger"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onLogout();
-                          }}
-                        >
-                          <LogOut size={15} />
-                          <span>Çıkış Yap</span>
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    /* Bireysel Müşteri (CUSTOMER) Menüsü: Doğrudan ilgili sekmeye yönlendirir */
-                    <>
-                      <div className="user-popover-header">
-                        <div className="user-popover-name">
-                          {session.full_name}
+
+                      {isAgent ? (
+                        <div className="user-popover-list">
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', { profileTab: 'messages' });
+                            }}
+                          >
+                            <MessageCircle size={15} />
+                            <span>Müşteri Mesajları</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', { profileTab: 'security' });
+                            }}
+                          >
+                            <ShieldCheck size={15} />
+                            <span>Hesap & Güvenlik Ayarları</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('agency');
+                            }}
+                          >
+                            <Store size={15} />
+                            <span>Ofis & Danışman Yönetimi</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('agency-storefront', {
+                                agencyId: session.agency?.id ?? 1,
+                              });
+                            }}
+                          >
+                            <Building2 size={15} />
+                            <span>Kurumsal Mağaza Vitrinim</span>
+                          </button>
+                          <div className="user-popover-divider" />
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={onToggleColorScheme}
+                          >
+                            {colorScheme === 'dark' ? (
+                              <Sun size={15} />
+                            ) : (
+                              <Moon size={15} />
+                            )}
+                            <span>
+                              Tema:{' '}
+                              {colorScheme === 'dark'
+                                ? 'Açık Görünüme Geç'
+                                : 'Koyu Görünüme Geç'}
+                            </span>
+                          </button>
+                          <div className="user-popover-divider" />
+                          <button
+                            type="button"
+                            className="user-popover-item is-danger"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onLogout();
+                            }}
+                          >
+                            <LogOut size={15} />
+                            <span>Çıkış Yap</span>
+                          </button>
                         </div>
-                        <div className="user-popover-role">Bireysel Üye</div>
-                      </div>
-                      <div className="user-popover-list">
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('profile', { profileTab: 'favorites' });
-                          }}
-                        >
-                          <Heart size={15} />
-                          <span>Favori İlanlarım</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('profile', {
-                              profileTab: 'appointments',
-                            });
-                          }}
-                        >
-                          <Calendar size={15} />
-                          <span>Randevularım</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('profile', {
-                              profileTab: 'sell-requests',
-                            });
-                          }}
-                        >
-                          <FileText size={15} />
-                          <span>Satış / Kiralama Başvurularım</span>
-                        </button>
-                        <button
-                          type="button"
-                          className="user-popover-item"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onNavigate('profile', { profileTab: 'security' });
-                          }}
-                        >
-                          <User size={15} />
-                          <span>Profilim & Güvenlik</span>
-                        </button>
-                        <div className="user-popover-divider" />
-                        <button
-                          type="button"
-                          className="user-popover-item is-danger"
-                          onClick={() => {
-                            setPopoverOpen(false);
-                            onLogout();
-                          }}
-                        >
-                          <LogOut size={15} />
-                          <span>Çıkış Yap</span>
-                        </button>
-                      </div>
+                      ) : (
+                        <div className="user-popover-list">
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', {
+                                profileTab: 'favorites',
+                              });
+                            }}
+                          >
+                            <Heart size={15} />
+                            <span>Favori İlanlarım</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', {
+                                profileTab: 'appointments',
+                              });
+                            }}
+                          >
+                            <Calendar size={15} />
+                            <span>Randevularım</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', { profileTab: 'messages' });
+                            }}
+                          >
+                            <MessageCircle size={15} />
+                            <span>Mesajlarım</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', {
+                                profileTab: 'sell-requests',
+                              });
+                            }}
+                          >
+                            <FileText size={15} />
+                            <span>Satış / Kiralama Başvurularım</span>
+                          </button>
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onNavigate('profile', { profileTab: 'security' });
+                            }}
+                          >
+                            <User size={15} />
+                            <span>Hesap Bilgilerim & Güvenlik</span>
+                          </button>
+                          <div className="user-popover-divider" />
+                          <button
+                            type="button"
+                            className="user-popover-item"
+                            onClick={onToggleColorScheme}
+                          >
+                            {colorScheme === 'dark' ? (
+                              <Sun size={15} />
+                            ) : (
+                              <Moon size={15} />
+                            )}
+                            <span>
+                              Tema:{' '}
+                              {colorScheme === 'dark'
+                                ? 'Açık Görünüme Geç'
+                                : 'Koyu Görünüme Geç'}
+                            </span>
+                          </button>
+                          <div className="user-popover-divider" />
+                          <button
+                            type="button"
+                            className="user-popover-item is-danger"
+                            onClick={() => {
+                              setPopoverOpen(false);
+                              onLogout();
+                            }}
+                          >
+                            <LogOut size={15} />
+                            <span>Çıkış Yap</span>
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
               )}
             </div>
-
-            {/* En Sağ Ana Aksiyon Hap Butonu */}
-            {isAgent ? (
-              <Button
-                variant="primary"
-                pill
-                leftIcon={<Plus size={16} />}
-                onClick={() => onNavigate('properties')}
-              >
-                Yeni İlan Ekle
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                pill
-                onClick={() => onNavigate('sell-request')}
-              >
-                Evini Sat / Kiraya Ver
-              </Button>
-            )}
-
-            <Button
-              variant="ghost"
-              size="icon"
-              pill
-              className="mobile-menu-btn"
-              onClick={() => setMobileMenuOpen(true)}
-              aria-label="Menü"
-            >
-              <Menu size={20} />
-            </Button>
           </div>
         </div>
       </header>
 
-      {/* Mobil Hamburger Menüsü */}
-      <Modal
-        isOpen={mobileMenuOpen}
-        onClose={() => setMobileMenuOpen(false)}
-        title="GİB e-Emlak Menü"
-        size="sm"
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {isAgent ? (
-            <>
-              <Button
-                variant={activePage === 'marketplace' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<Home size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('marketplace', { listingType: 'ALL' });
-                }}
+      {/* Mobilde Büyüteç İkonuna Tıklanınca Açılan Arama Barı */}
+      <AnimatePresence>
+        {showTopSearchBar && mobileSearchOpen && (
+          <motion.div
+            key="mobile-search-dropbar"
+            className="mobile-search-dropbar"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.18 }}
+          >
+            <form
+              className="navbar-search-box"
+              onSubmit={(e) => {
+                e.preventDefault();
+                setMobileSearchOpen(false);
+                onSearchSubmit(draftSearch);
+              }}
+            >
+              <span className="navbar-search-sparkle">
+                <Sparkles size={15} />
+              </span>
+              <input
+                type="text"
+                className="navbar-search-input"
+                placeholder="Konum veya kelime yazıp Ara'ya basın..."
+                value={draftSearch}
+                onChange={(e) => setDraftSearch(e.target.value)}
+                autoFocus
+              />
+              <button
+                type="submit"
+                className="mobile-search-submit-btn"
+                aria-label="Ara"
               >
-                İlan Vitrini
-              </Button>
-              <Button
-                variant={activePage === 'properties' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<Building2 size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('properties');
-                }}
-              >
-                Portföy Yönetimi
-              </Button>
-              <Button
-                variant={activePage === 'calendar' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<Calendar size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('calendar');
-                }}
-              >
-                Randevu Takvimi
-              </Button>
-              <Button
-                variant={activePage === 'customers' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<Users size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('customers');
-                }}
-              >
-                Müşteriler
-              </Button>
-              <Button
-                variant={activePage === 'agency' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<Store size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('agency');
-                }}
-              >
-                Ofis & Danışmanlar
-              </Button>
-              <Button
-                variant={activePage === 'reports' ? 'primary' : 'outline'}
-                fullWidth
-                leftIcon={<BarChart3 size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('reports');
-                }}
-              >
-                Analitik
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button
-                variant="outline"
-                fullWidth
-                leftIcon={<Home size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('marketplace', { listingType: 'SATILIK' });
-                }}
-              >
-                Satılık İlanlar
-              </Button>
-              <Button
-                variant="outline"
-                fullWidth
-                leftIcon={<KeyRound size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('marketplace', { listingType: 'KIRALIK' });
-                }}
-              >
-                Kiralık İlanlar
-              </Button>
-              <Button
-                variant="outline"
-                fullWidth
-                leftIcon={<Users size={16} />}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('agency-storefront', { agencyId: 1 });
-                }}
-              >
-                Danışmanlar & Emlak Ofisleri
-              </Button>
-              <Button
-                variant="primary"
-                fullWidth
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onNavigate('sell-request');
-                }}
-              >
-                Evini Sat / Kiraya Ver
-              </Button>
-            </>
-          )}
-        </div>
-      </Modal>
+                Ara
+              </button>
+            </form>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

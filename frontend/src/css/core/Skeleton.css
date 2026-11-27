@@ -1,0 +1,53 @@
+.gib-skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--color-bg-surface-alt);
+  border-radius: 10px;
+}
+
+.gib-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  animation: gib-skeleton-shimmer 1.25s infinite;
+}
+
+.dark .gib-skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 100%
+  );
+}
+
+@keyframes gib-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.gib-skeleton-card-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+@media (max-width: 1120px) {
+  .gib-skeleton-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .gib-skeleton-card-grid {
+    grid-template-columns: 1fr;
+  }
+}

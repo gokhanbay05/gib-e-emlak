@@ -53,6 +53,15 @@ export interface PropertyUpsertPayload {
   agent_description: string;
   status: PropertyStatus;
   image_url?: string | null;
+  images?: string[];
+  building_age?: number;
+  bathroom_count?: number;
+  is_credit_eligible?: boolean;
+  is_furnished?: boolean;
+  deed_status?: string;
+  usage_status?: string;
+  features?: string[];
+  advisor_name?: string;
 }
 
 export interface CreateSearchRequestPayload {

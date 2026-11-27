@@ -134,7 +134,7 @@
   color: var(--color-text-muted);
 }
 
-/* Sağ Alt Yüzen HepsiAI ile Ara Tetikleyici Hapı (Yalnızca İlan Sayfalarında) */
+/* Sağ Alt Yüzen GİB AI ile Ara Tetikleyici Hapı */
 .floating-hepsi-ai-btn {
   position: fixed;
   right: 24px;
@@ -146,23 +146,42 @@
   height: 46px;
   padding: 0 20px;
   border-radius: var(--radius-pill);
-  border: 2px solid #a855f7;
+  border: 1.5px solid var(--color-ai-accent);
   background-color: var(--color-bg-surface);
   color: var(--color-text-dark);
   font-size: 14px;
   font-weight: 800;
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.22);
   cursor: pointer;
   transition: all 0.18s ease;
 }
 
 .floating-hepsi-ai-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 12px 30px rgba(15, 118, 110, 0.28);
 }
 
 .floating-hepsi-ai-btn span.ai-grad-text {
-  background: linear-gradient(135deg, #6366f1 0%, #ec4899 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #2d4f43 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 720px) {
+  .ai-search-topbar {
+    padding: 12px 16px;
+  }
+  .ai-search-thread {
+    padding: 20px 14px;
+  }
+  .ai-search-bottom-bar {
+    padding: 10px 14px 16px;
+  }
+  .floating-hepsi-ai-btn {
+    right: 14px;
+    bottom: 14px;
+    height: 42px;
+    padding: 0 15px;
+    font-size: 13px;
+  }
 }

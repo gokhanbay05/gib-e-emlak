@@ -1,14 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
-  CheckCircle2,
+  Building2,
+  MapPin,
   Phone,
   ShieldCheck,
-  SlidersHorizontal,
   Star,
-  UserCheck,
 } from 'lucide-react';
 import { fetchAgencies } from '../api/agencies';
+import { fetchAgencyReviews } from '../api/engagement';
 import {
   addFavorite,
   fetchFavorites,
@@ -17,48 +17,55 @@ import {
 import { fetchProperties } from '../api/properties';
 import {
   Avatar,
-  Badge,
   Breadcrumb,
   Button,
   Card,
+  Modal,
   Select,
 } from '../components/core';
 import { DetailSplitLayout, PageContainer } from '../components/layout';
-import AppointmentModal from '../components/modals/AppointmentModal';
 import PropertyHorizontalCard from '../components/property/PropertyHorizontalCard';
 import {
   getAdvisorsForAgency,
   getPropertyAdvisor,
 } from '../lib/advisors';
-import type { AgencyRecord, PropertyRecord, UserSession } from '../types';
+import type {
+  AgencyRecord,
+  AgencyReviewRecord,
+  PropertyRecord,
+  UserSession,
+} from '../types';
 
 export interface AgencyStorefrontPageProps {
   agencyId: number | null;
   initialAdvisorId: number | null;
   session: UserSession;
   onSelectProperty: (property: PropertyRecord) => void;
-  onSelectAgency: (agencyId: number, advisorId?: number) => void;
+  onBackToDirectory: () => void;
   onBackToMarketplace: () => void;
   onRequireAuth: (reason: string) => void;
   onNotify: (msg: string) => void;
 }
 
 /**
- * Hepsiemlak Screenshot #12 (Şahmeran Emlak Konut / Danışmanlarımız) birebir
- * Kurumsal Emlak Ofisi Vitrini ve Çoklu Danışman Portföy Sayfası.
+ * Madde 2 & 8: Kurumsal Emlak Ofisi Vitrini ve Çoklu Danışman Portföy Sayfası.
+ * - Sağ üstteki ofis seçme listbox'ı kaldırıldı (Emlak Ofisleri rehber sayfasından seçilir).
+ * - Mavi tik, "Kurumsal Üye • 14. Yıl" ve gerçekte olmayan 4.9 yıldız puanı kaldırıldı.
+ * - Soldaki yanıltıcı "Tümünü Gör" butonu ve sağdaki alakasız "Selim Karahan x" rozeti kaldırıldı;
+ *   yerine filtre çubuğuna doğrudan "Danışman Seç" Select filtresi eklendi.
  */
 export function AgencyStorefrontPage({
   agencyId,
   initialAdvisorId,
   session,
   onSelectProperty,
-  onSelectAgency,
+  onBackToDirectory,
   onBackToMarketplace,
   onRequireAuth,
   onNotify,
 }: AgencyStorefrontPageProps) {
   const [agencies, setAgencies] = useState<AgencyRecord[]>([]);
-  const [activeAgencyId, setActiveAgencyId] = useState<number>(agencyId || 1);
+  const activeAgencyId = agencyId || 1;
   const [selectedAdvisorId, setSelectedAdvisorId] = useState<number | null>(
     initialAdvisorId,
   );
@@ -67,15 +74,32 @@ export function AgencyStorefrontPage({
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [favoriteIds, setFavoriteIds] = useState<Set<number>>(new Set());
   const [showOfficePhone, setShowOfficePhone] = useState(false);
-  const [appointmentProperty, setAppointmentProperty] =
-    useState<PropertyRecord | null>(null);
+  const [reviews, setReviews] = useState<AgencyReviewRecord[]>([]);
+  const [reviewStats, setReviewStats] = useState<{ average: number; count: number }>({
+    average: 0,
+    count: 0,
+  });
+  const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
+
+  const commentCount = useMemo(
+    () => reviews.filter((r) => Boolean(r.comment && r.comment.trim())).length,
+    [reviews],
+  );
 
   const isAgent = session.role === 'AGENT';
 
   useEffect(() => {
-    if (agencyId) setActiveAgencyId(agencyId);
     setSelectedAdvisorId(initialAdvisorId);
-  }, [agencyId, initialAdvisorId]);
+  }, [initialAdvisorId]);
+
+  useEffect(() => {
+    void fetchAgencyReviews(activeAgencyId)
+      .then((res) => {
+        setReviews(res.reviews);
+        setReviewStats({ average: res.average, count: res.count });
+      })
+      .catch(() => {});
+  }, [activeAgencyId]);
 
   useEffect(() => {
     void fetchAgencies()
@@ -134,9 +158,11 @@ export function AgencyStorefrontPage({
         next.delete(propertyId);
         return next;
       });
+      onNotify('İlan favorilerinizden çıkarıldı.');
     } else {
       await addFavorite(session.id, propertyId);
       setFavoriteIds((prev) => new Set(prev).add(propertyId));
+      onNotify('İlan favorilerinize eklendi.');
     }
   };
 
@@ -145,133 +171,118 @@ export function AgencyStorefrontPage({
       <Breadcrumb
         items={[
           { label: 'Ana Sayfa', onClick: onBackToMarketplace },
+          { label: 'Emlak Ofisleri', onClick: onBackToDirectory },
           {
             label: currentAgency?.name ?? 'Emlak Ofisi',
             onClick: () => setSelectedAdvisorId(null),
           },
           ...(selectedAdvisor ? [{ label: selectedAdvisor.full_name }] : []),
         ]}
-        rightAction={
-          agencies.length > 1 && (
-            <Select
-              selectSize="sm"
-              pill
-              value={String(activeAgencyId)}
-              onChange={(val) => {
-                const nextId = Number(val);
-                setActiveAgencyId(nextId);
-                setSelectedAdvisorId(null);
-                onSelectAgency(nextId);
-              }}
-              options={agencies.map((a) => ({
-                value: String(a.id),
-                label: a.name,
-              }))}
-            />
-          )
-        }
       />
 
-      {/* Üst Emlak Ofisi Kurumsal Kimlik Kartı (Screenshot #12) */}
+      {/* Üst Emlak Ofisi Kurumsal Kimlik Kartı (Mobilde 1 sütuna iner, taşma yok) */}
       <Card padding="lg" style={{ marginBottom: '22px' }}>
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'minmax(0, 1fr) 280px',
-            gap: '24px',
-            alignItems: 'center',
-          }}
-        >
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start' }}>
+        <div className="agency-hero-card-grid">
+          <div className="agency-hero-identity">
             <Avatar
               src={currentAgency?.logo_url}
               name={currentAgency?.name ?? 'Ofis'}
               size="xl"
+              shape="rounded"
             />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                minWidth: 0,
+              }}
+            >
+              <h1 style={{ margin: 0, fontSize: '21px', fontWeight: 800 }}>
+                {currentAgency?.name ?? 'Başkent Vizyon Gayrimenkul A.Ş.'}
+              </h1>
+
               <div
                 style={{
+                  fontSize: '13px',
+                  color: 'var(--color-text-body)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '12px',
                   flexWrap: 'wrap',
                 }}
               >
-                <h1 style={{ margin: 0, fontSize: '22px', fontWeight: 800 }}>
-                  {currentAgency?.name ?? 'Başkent Vizyon Gayrimenkul A.Ş.'}
-                </h1>
-                <CheckCircle2
-                  size={20}
-                  fill="var(--color-verified)"
-                  color="#ffffff"
-                />
-              </div>
-
-              <div
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--color-text-muted)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                <Badge variant="primary">Kurumsal Üye • 14. Yıl</Badge>
-                <span>
-                  {currentAgency?.district ?? 'Çankaya'} /{' '}
-                  {currentAgency?.city ?? 'Ankara'}
-                </span>
-              </div>
-
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#f59e0b',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                }}
-              >
-                <span style={{ color: 'var(--color-text-dark)' }}>4.9</span>
-                <Star size={14} fill="#f59e0b" />
-                <Star size={14} fill="#f59e0b" />
-                <Star size={14} fill="#f59e0b" />
-                <Star size={14} fill="#f59e0b" />
-                <Star size={14} fill="#f59e0b" />
                 <span
                   style={{
-                    fontSize: '11.5px',
-                    color: 'var(--color-text-muted)',
-                    marginLeft: '4px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
                   }}
                 >
-                  GİB Doğrulanmış İşletme
+                  <MapPin size={14} color="var(--color-primary)" />
+                  <strong>
+                    {currentAgency?.district ?? 'Çankaya'} /{' '}
+                    {currentAgency?.city ?? 'Ankara'}
+                  </strong>
                 </span>
+                <span>•</span>
+                <span>
+                  Yetkili:{' '}
+                  <strong>
+                    {currentAgency?.authorized_person ?? 'Selim Karahan'}
+                  </strong>
+                </span>
+                <span>•</span>
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <Building2 size={14} color="var(--color-primary)" />
+                  <strong>{properties.length} Aktif İlan</strong>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setReviewsModalOpen(true)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--radius-pill)',
+                    border: '1px solid var(--color-border-default)',
+                    backgroundColor: 'var(--color-bg-surface-alt)',
+                    color: 'var(--color-text-primary)',
+                    fontWeight: 700,
+                    fontSize: '12.5px',
+                    cursor: 'pointer',
+                  }}
+                  title="Tüm değerlendirme ve yorumları aç"
+                >
+                  <Star size={14} fill="#f59e0b" color="#f59e0b" />
+                  <span>
+                    {reviewStats.average.toFixed(1)} • {reviewStats.count}{' '}
+                    Değerlendirme • {commentCount} Yorum
+                  </span>
+                </button>
               </div>
 
               <p
                 style={{
-                  margin: '6px 0 0',
+                  margin: '4px 0 0',
                   fontSize: '13.5px',
-                  color: 'var(--color-text-body)',
+                  color: 'var(--color-text-muted)',
                 }}
               >
                 {currentAgency?.description ||
-                  '1998 yılından bugüne Ticaret Bakanlığı Taşınmaz Ticareti Yetki Belgeli kurumsal gayrimenkul danışmanlığı hizmetinizdeyiz.'}
+                  'Ticaret Bakanlığı Taşınmaz Ticareti Yetki Belgeli kurumsal gayrimenkul danışmanlığı.'}
               </p>
             </div>
           </div>
 
-          <div
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px',
-              paddingLeft: '24px',
-              borderLeft: '1px solid var(--color-border-default)',
-            }}
-          >
+          <div className="agency-hero-ttbs-col">
             <div className="ttbs-gray-box" style={{ textAlign: 'center' }}>
               <span
                 className="ttbs-gray-label"
@@ -304,45 +315,22 @@ export function AgencyStorefrontPage({
         </div>
       </Card>
 
-      {/* Alt 2 Sütun: Sol "Danışmanlarımız" | Sağ Danışman/Ofis İlanları (Screenshot #12) */}
+      {/* Alt 2 Sütun: Sol "Danışmanlarımız" | Sağ Danışman/Ofis İlanları */}
       <DetailSplitLayout
         sidebarPosition="left"
         sidebar={
           <Card>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '14px',
-              }}
-            >
+            <div style={{ marginBottom: '14px' }}>
               <h3 style={{ margin: 0, fontSize: '15.5px', fontWeight: 800 }}>
                 Danışmanlarımız ({advisors.length})
               </h3>
-              {selectedAdvisorId && (
-                <button
-                  type="button"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-primary)',
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                  onClick={() => setSelectedAdvisorId(null)}
-                >
-                  Tümünü Gör
-                </button>
-              )}
             </div>
 
             <div
               style={{
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '14px',
+                gap: '12px',
               }}
             >
               {advisors.map((adv) => {
@@ -410,6 +398,7 @@ export function AgencyStorefrontPage({
         }
         main={
           <>
+            {/* Sağ Üst Filtre Çubuğu: Danışman Seç + Emlak Türü + Sırala (Tek Satırda) */}
             <div className="results-header-card">
               <div className="results-count-text">
                 <strong>
@@ -420,32 +409,43 @@ export function AgencyStorefrontPage({
                 için <strong>{displayedProperties.length}</strong> ilan bulundu
               </div>
 
-              <div className="results-toolbar-right">
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 155px), 1fr))',
+                  gap: '8px',
+                  width: '100%',
+                }}
+              >
+                <Select
+                  selectSize="sm"
+                  pill
+                  value={selectedAdvisorId ? String(selectedAdvisorId) : 'ALL'}
+                  onChange={(val) =>
+                    setSelectedAdvisorId(val === 'ALL' ? null : Number(val))
+                  }
+                  options={[
+                    { value: 'ALL', label: 'Danışman: Tümü' },
+                    ...advisors.map((a) => ({
+                      value: String(a.id),
+                      label: `Danışman: ${a.full_name}`,
+                    })),
+                  ]}
+                />
+
                 <Select
                   selectSize="sm"
                   pill
                   value={propertyTypeFilter}
                   onChange={setPropertyTypeFilter}
                   options={[
-                    { value: 'ALL', label: 'Emlak Türüne Göre Filtrele (Tümü)' },
+                    { value: 'ALL', label: 'Emlak Türü: Tümü' },
                     { value: 'DAIRE', label: 'Konut / Daire' },
                     { value: 'VILLA', label: 'Villa' },
                     { value: 'ISYERI', label: 'İşyeri' },
                     { value: 'ARSA', label: 'Arsa' },
                   ]}
                 />
-
-                {selectedAdvisor && (
-                  <Button
-                    variant="outline-primary"
-                    size="sm"
-                    pill
-                    leftIcon={<UserCheck size={14} />}
-                    onClick={() => setSelectedAdvisorId(null)}
-                  >
-                    {selectedAdvisor.full_name} ✕
-                  </Button>
-                )}
 
                 <Select
                   selectSize="sm"
@@ -470,27 +470,234 @@ export function AgencyStorefrontPage({
                   hideCustomerActions={isAgent}
                   onSelect={onSelectProperty}
                   onToggleFavorite={(id) => void handleToggleFavorite(id)}
-                  onSelectAgency={(agId, advId) => {
-                    setActiveAgencyId(agId);
+                  onSelectAgency={(_agId, advId) => {
                     if (advId) setSelectedAdvisorId(advId);
                   }}
-                  onRequestAppointment={(prop) => setAppointmentProperty(prop)}
                 />
               ))}
             </div>
+
+            {/* Doğrulanmış Randevu Değerlendirmeleri ve Müşteri Yorumları */}
+            <Card padding="lg" style={{ marginTop: '22px' }}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '12px',
+                  flexWrap: 'wrap',
+                  marginBottom: '16px',
+                }}
+              >
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800 }}>
+                    Müşteri Yorumları ve Değerlendirmeler
+                  </h3>
+                  <p
+                    style={{
+                      margin: '4px 0 0',
+                      fontSize: '12.5px',
+                      color: 'var(--color-text-muted)',
+                    }}
+                  >
+                    Yalnızca bu ofisle yerinde gösterim randevusu tamamlanan müşteriler yorum bırakabilir.
+                  </p>
+                </div>
+
+                {reviewStats.count > 0 && (
+                  <div
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '8px 14px',
+                      borderRadius: 'var(--radius-pill)',
+                      backgroundColor: 'var(--color-warning-bg, rgba(245,158,11,0.12))',
+                      fontWeight: 800,
+                      fontSize: '14px',
+                    }}
+                  >
+                    <Star size={16} fill="#f59e0b" color="#f59e0b" />
+                    <span>{reviewStats.average.toFixed(1)}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-muted)' }}>
+                      ({reviewStats.count} yorum)
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {reviews.length === 0 ? (
+                <div
+                  style={{
+                    padding: '20px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--color-bg-surface-alt)',
+                    color: 'var(--color-text-muted)',
+                    fontSize: '13px',
+                    textAlign: 'center',
+                  }}
+                >
+                  Henüz doğrulanmış müşteri değerlendirmesi bulunmuyor.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {reviews.map((rev) => (
+                    <div
+                      key={rev.id}
+                      style={{
+                        padding: '14px 16px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--color-border-default)',
+                        backgroundColor: 'var(--color-bg-surface-alt)',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                            {rev.reviewer_name}
+                          </span>
+                          {rev.advisor_name && (
+                            <span
+                              style={{
+                                fontSize: '11.5px',
+                                color: 'var(--color-text-muted)',
+                              }}
+                            >
+                              • Danışman: {rev.advisor_name}
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <Star
+                              key={star}
+                              size={13}
+                              fill={star <= rev.rating ? '#f59e0b' : 'transparent'}
+                              color={star <= rev.rating ? '#f59e0b' : 'var(--color-text-muted)'}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      {rev.comment && (
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: '13px',
+                            lineHeight: 1.55,
+                            color: 'var(--color-text-body)',
+                          }}
+                        >
+                          {rev.comment}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
           </>
         }
       />
 
-      <AppointmentModal
-        property={appointmentProperty}
-        session={session}
-        onClose={() => setAppointmentProperty(null)}
-        onBooked={onNotify}
-        onRequireAuth={() =>
-          onRequireAuth('Randevu oluşturmak için lütfen giriş yapınız.')
+      {/* Değerlendirme & Yorumlar Pop-up Modalı */}
+      <Modal
+        isOpen={reviewsModalOpen}
+        onClose={() => setReviewsModalOpen(false)}
+        title={`${currentAgency?.name ?? 'Emlak Ofisi'} — Müşteri Değerlendirmeleri (${reviewStats.count})`}
+        size="md"
+        footer={
+          <Button
+            variant="primary"
+            pill
+            onClick={() => setReviewsModalOpen(false)}
+          >
+            Kapat
+          </Button>
         }
-      />
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              backgroundColor: 'var(--color-bg-surface-alt)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '15px' }}>
+              <Star size={18} fill="#f59e0b" color="#f59e0b" />
+              <span>Ortalama Puan: {reviewStats.average.toFixed(1)} / 5.0</span>
+            </div>
+            <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)', fontWeight: 600 }}>
+              {reviewStats.count} Değerlendirme • {commentCount} Yorum
+            </div>
+          </div>
+
+          {reviews.map((rev) => (
+            <div
+              key={`modal-rev-${rev.id}`}
+              style={{
+                padding: '14px 16px',
+                borderRadius: '12px',
+                border: '1px solid var(--color-border-default)',
+                backgroundColor: 'var(--color-bg-surface)',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: '10px',
+                  marginBottom: '6px',
+                }}
+              >
+                <div>
+                  <span style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                    {rev.reviewer_name}
+                  </span>
+                  {rev.advisor_name && (
+                    <span style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: '6px' }}>
+                      • Danışman: {rev.advisor_name}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      size={13}
+                      fill={star <= rev.rating ? '#f59e0b' : 'transparent'}
+                      color={star <= rev.rating ? '#f59e0b' : 'var(--color-text-muted)'}
+                    />
+                  ))}
+                </div>
+              </div>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '13px',
+                  lineHeight: 1.55,
+                  color: rev.comment ? 'var(--color-text-body)' : 'var(--color-text-muted)',
+                  fontStyle: rev.comment ? 'normal' : 'italic',
+                }}
+              >
+                {rev.comment || 'Yalnızca yıldız puanı bırakıldı.'}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Modal>
     </PageContainer>
   );
 }

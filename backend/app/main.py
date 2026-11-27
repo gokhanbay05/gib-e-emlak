@@ -11,6 +11,7 @@ from app.routers.agencies import router as agencies_router
 from app.routers.appointments import router as appointments_router
 from app.routers.auth import router as auth_router
 from app.routers.customers import router as customers_router
+from app.routers.engagement import router as engagement_router
 from app.routers.favorites import router as favorites_router
 from app.routers.locations import router as locations_router
 from app.routers.properties import router as properties_router
@@ -51,6 +52,7 @@ app.include_router(favorites_router)
 app.include_router(appointments_router)
 app.include_router(locations_router)
 app.include_router(uploads_router)
+app.include_router(engagement_router)
 
 uploads_root = Path(__file__).resolve().parent.parent / "uploads"
 uploads_root.mkdir(parents=True, exist_ok=True)

@@ -204,9 +204,29 @@ def list_customers(
     sort_dir: str = "desc",
     db: Session = Depends(get_db),
 ) -> dict:
+    from sqlalchemy import or_
+
     base_stmt = select(Customer)
     if agency_id is not None:
-        base_stmt = base_stmt.where(Customer.agency_id == agency_id)
+        appt_cust_ids = select(Appointment.customer_id).where(
+            Appointment.agency_id == agency_id
+        )
+        if agency_id == 1:
+            base_stmt = base_stmt.where(
+                or_(
+                    Customer.agency_id == agency_id,
+                    Customer.agency_id.is_(None),
+                    Customer.id.in_(appt_cust_ids),
+                    Customer.source.in_(["SELF_KAYIT", "ONLINE_RANDEVU"]),
+                )
+            )
+        else:
+            base_stmt = base_stmt.where(
+                or_(
+                    Customer.agency_id == agency_id,
+                    Customer.id.in_(appt_cust_ids),
+                )
+            )
 
     scoped_customers = db.scalars(base_stmt).all()
 

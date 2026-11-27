@@ -55,9 +55,183 @@
 
 @media (max-width: 768px) {
   .page-container {
-    padding: 14px 14px 36px;
+    padding: 14px 12px 36px;
   }
   .page-header-title {
     font-size: 18px;
+  }
+}
+
+/* Raporlama & Emlak Ofisi Mobil Uyumluluk Yardımcıları */
+.reports-two-col-wide {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.reports-two-col-equal {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+
+.reports-advisor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background-color: var(--color-bg-surface-alt);
+}
+
+.reports-advisor-metrics {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: right;
+  flex-wrap: wrap;
+}
+
+.agency-hero-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 24px;
+  align-items: center;
+}
+
+.agency-hero-identity {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  min-width: 0;
+}
+
+.agency-hero-ttbs-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-left: 24px;
+  border-left: 1px solid var(--color-border-default);
+}
+
+@media (max-width: 900px) {
+  .reports-two-col-wide,
+  .reports-two-col-equal,
+  .agency-hero-card-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .agency-hero-ttbs-col {
+    padding-left: 0;
+    padding-top: 14px;
+    border-left: none;
+    border-top: 1px solid var(--color-border-default);
+  }
+  .reports-advisor-metrics {
+    width: 100%;
+    justify-content: space-between;
+    text-align: left;
+  }
+}
+
+.agency-dir-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+}
+
+.advisor-manage-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background-color: var(--color-bg-surface-alt);
+  border: 1px solid var(--color-border-default);
+  flex-wrap: wrap;
+}
+
+.advisor-manage-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.sell-agency-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  cursor: pointer;
+  flex-wrap: wrap;
+}
+
+.sell-agency-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .advisor-manage-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+    gap: 12px;
+  }
+  .advisor-manage-identity {
+    align-items: flex-start;
+  }
+  .advisor-manage-card button {
+    width: 100%;
+    justify-content: center;
+  }
+  .sell-agency-card {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 14px;
+    gap: 12px;
+  }
+  .sell-agency-identity {
+    align-items: flex-start;
+  }
+  .sell-agency-actions {
+    width: 100%;
+    justify-content: space-between;
+    padding-top: 8px;
+    border-top: 1px solid var(--color-border-subtle);
+  }
+  .agency-dir-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .agency-dir-row .agency-dir-cta {
+    width: 100%;
+  }
+  .agency-dir-row .agency-dir-cta button {
+    width: 100%;
+  }
+  .sell-step-footer {
+    flex-direction: column-reverse !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+  .sell-step-footer button {
+    width: 100%;
+  }
+  .sell-nvi-btn {
+    width: 100%;
+    justify-content: center;
   }
 }

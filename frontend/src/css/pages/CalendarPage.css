@@ -177,12 +177,31 @@
   flex-shrink: 0;
 }
 
+.apple-cal-grid-scroll {
+  width: 100%;
+}
+
 @media (max-width: 900px) {
+  .apple-cal-toolbar {
+    padding: 12px 14px;
+    gap: 10px;
+  }
+  .apple-cal-month-title {
+    font-size: 18px;
+  }
+  .apple-cal-grid-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .apple-cal-weekdays,
   .apple-cal-grid {
-    grid-auto-rows: minmax(90px, auto);
+    min-width: 680px;
+  }
+  .apple-cal-grid {
+    grid-auto-rows: minmax(96px, auto);
   }
   .apple-cal-event-pill {
-    font-size: 10px;
-    padding: 2px 5px;
+    font-size: 10.5px;
+    padding: 3px 6px;
   }
 }

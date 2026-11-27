@@ -7,21 +7,41 @@
 .prop-gallery-stage {
   position: relative;
   width: 100%;
-  height: 460px;
+  height: 410px;
   border-radius: var(--radius-lg);
   overflow: hidden;
-  background-color: var(--color-bg-muted);
+  background-color: #0f172a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Dikey (9:16) veya farklı orandaki görsellerin arkası için yumuşak bulanık katman */
+.prop-gallery-backdrop {
+  position: absolute;
+  inset: -20px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(22px) brightness(0.55);
+  transform: scale(1.08);
+  pointer-events: none;
+}
+
+/* Görsel kendi oranını koruyarak (object-fit: contain) bozulmadan sığar */
 .prop-gallery-main-img {
-  width: 100%;
+  position: relative;
+  z-index: 2;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   cursor: zoom-in;
 }
 
 .prop-gallery-nav-btn {
   position: absolute;
+  z-index: 5;
   top: 50%;
   transform: translateY(-50%);
   width: 40px;
@@ -53,13 +73,14 @@
 
 .prop-gallery-fav-btn {
   position: absolute;
+  z-index: 5;
   top: 14px;
   right: 14px;
   width: 40px;
   height: 40px;
   border-radius: 50%;
   border: none;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: rgba(255, 255, 255, 0.92);
   color: #475569;
   display: flex;
   align-items: center;
@@ -75,6 +96,7 @@
 
 .prop-gallery-zoom-pill {
   position: absolute;
+  z-index: 5;
   bottom: 14px;
   left: 14px;
   display: inline-flex;
@@ -83,7 +105,7 @@
   padding: 7px 14px;
   border-radius: var(--radius-pill);
   border: none;
-  background-color: rgba(15, 23, 42, 0.72);
+  background-color: rgba(15, 23, 42, 0.76);
   backdrop-filter: blur(4px);
   color: #ffffff;
   font-size: 12.5px;
@@ -93,17 +115,18 @@
 }
 
 .prop-gallery-zoom-pill:hover {
-  background-color: rgba(15, 23, 42, 0.9);
+  background-color: rgba(15, 23, 42, 0.92);
 }
 
 .prop-gallery-counter-pill {
   position: absolute;
+  z-index: 5;
   bottom: 14px;
   left: 50%;
   transform: translateX(-50%);
   padding: 5px 13px;
   border-radius: var(--radius-pill);
-  background-color: rgba(15, 23, 42, 0.72);
+  background-color: rgba(15, 23, 42, 0.76);
   color: #ffffff;
   font-size: 12.5px;
   font-weight: 700;
@@ -111,12 +134,13 @@
 
 .prop-gallery-watermark {
   position: absolute;
+  z-index: 5;
   bottom: 14px;
   right: 16px;
   font-size: 13px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.85);
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.65);
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
 }
 
 .prop-gallery-thumbs {
@@ -126,7 +150,7 @@
 }
 
 .prop-gallery-thumb-btn {
-  height: 82px;
+  height: 76px;
   padding: 0;
   border-radius: var(--radius-md);
   border: 2px solid transparent;
@@ -149,9 +173,119 @@
 
 @media (max-width: 720px) {
   .prop-gallery-stage {
-    height: 280px;
+    height: 250px;
   }
   .prop-gallery-thumb-btn {
-    height: 58px;
+    height: 52px;
   }
+  .prop-gallery-nav-btn,
+  .prop-gallery-fav-btn,
+  .prop-lightbox-arrow,
+  .prop-lightbox-footer,
+  .prop-lightbox-title {
+    display: none !important;
+  }
+  .prop-gallery-zoom-pill {
+    bottom: 10px;
+    left: 10px;
+    padding: 5px 10px;
+    font-size: 11.5px;
+  }
+  .prop-gallery-counter-pill {
+    bottom: 10px;
+    left: auto;
+    right: 10px;
+    transform: none;
+    padding: 4px 10px;
+    font-size: 11.5px;
+  }
+  .prop-gallery-watermark {
+    display: none;
+  }
+}
+
+/* Gerçek Tam Ekran Lightbox Fotoğraf Görüntüleyici */
+.prop-lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1300;
+  background-color: rgba(10, 10, 12, 0.94);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 16px;
+}
+
+.prop-lightbox-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #ffffff;
+  z-index: 2;
+}
+
+.prop-lightbox-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.prop-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.prop-carousel-track {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  will-change: transform;
+}
+
+.prop-carousel-slide {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.prop-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.prop-lightbox-arrow:hover {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.prop-lightbox-arrow.is-left {
+  left: 8px;
+}
+
+.prop-lightbox-arrow.is-right {
+  right: 8px;
 }

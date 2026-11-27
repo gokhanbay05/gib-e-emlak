@@ -16,95 +16,142 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
 }
 
-/* Hepsiemlak Tarzı Marka Logosu (Mavi buton değil, gerçek marka linki!) */
+.navbar-left-cluster {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.navbar-center-slot {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+/* Çizimdeki Mimari Plan Çerçeveli GİB [e-emlak] Logosu */
 .brand-logo-link {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: 6px;
   background: none;
   border: none;
-  padding: 4px 0;
+  padding: 2px 0;
   cursor: pointer;
   flex-shrink: 0;
   text-decoration: none;
 }
 
-.brand-roof-mark {
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, var(--color-primary) 0%, #be123c 100%);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 3px 8px rgba(225, 29, 72, 0.25);
-}
-
-.brand-logo-text {
-  font-size: 20px;
-  font-weight: 800;
+.brand-gib-text {
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
   letter-spacing: -0.03em;
   color: var(--color-text-dark);
+  line-height: 1;
 }
 
-.brand-logo-text span {
-  color: var(--color-primary);
+.brand-eemlak-box {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px 5px 8px;
+  border-top: 2.2px solid var(--color-primary);
+  border-bottom: 2.2px solid var(--color-primary);
+  border-left: 2.2px solid var(--color-primary);
+  font-family: 'Space Grotesk', 'Plus Jakarta Sans', sans-serif;
+  font-size: 15.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--color-text-dark);
+  line-height: 1;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
 }
 
-.brand-logo-badge {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--color-primary);
+.brand-eemlak-box::before,
+.brand-eemlak-box::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  width: 2.2px;
+  height: 32%;
+  background-color: var(--color-primary);
+}
+
+.brand-eemlak-box::before {
+  top: 0;
+}
+
+.brand-eemlak-box::after {
+  bottom: 0;
+}
+
+.brand-logo-link:hover .brand-eemlak-box {
   background-color: var(--color-primary-soft);
-  padding: 2px 6px;
-  border-radius: var(--radius-pill);
-  margin-left: -2px;
-  align-self: flex-start;
 }
 
-/* Orta Navigasyon Linkleri */
+/* Navigasyon Linkleri (Masaüstünde İkon+Yazı, Mobilde Sadece İkon) */
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .navbar-link-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   height: 38px;
-  padding: 0 13px;
-  border-radius: var(--radius-pill);
+  padding: 0 12px;
+  border-radius: var(--radius-md);
   border: none;
   background: transparent;
   color: var(--color-text-body);
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition: color 0.16s ease;
   white-space: nowrap;
 }
 
 .navbar-link-item:hover {
-  background-color: var(--color-bg-hover);
   color: var(--color-primary);
 }
 
 .navbar-link-item.is-active {
   color: var(--color-primary);
-  background-color: var(--color-primary-soft);
 }
 
-/* Hepsiemlak Ortalanmış Yuvarlak Arama Çubuğu */
+.navbar-active-pill-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-md);
+  background-color: var(--color-primary-soft);
+  border: 1px solid var(--color-primary-border);
+  z-index: 0;
+}
+
+.navbar-link-content {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Ortalanmış Arama Çubuğu */
 .navbar-search-wrap {
-  flex: 1;
-  max-width: 440px;
-  min-width: 200px;
+  width: 100%;
+  max-width: 400px;
+  min-width: 0;
 }
 
 .navbar-search-box {
@@ -112,12 +159,12 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: 40px;
+  height: 38px;
   background-color: var(--color-bg-surface-alt);
-  border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-pill);
-  padding: 0 12px 0 14px;
-  transition: all 0.18s ease;
+  border: 1.5px solid var(--color-border-default);
+  border-radius: var(--radius-md);
+  padding: 0 10px 0 12px;
+  transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
 .navbar-search-box:focus-within {
@@ -127,7 +174,7 @@
 }
 
 .navbar-search-sparkle {
-  color: var(--color-ai-accent);
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   margin-right: 8px;
@@ -156,19 +203,92 @@
   padding: 4px;
   display: flex;
   align-items: center;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
 }
 
 .navbar-search-btn:hover {
   color: var(--color-primary);
 }
 
-/* Sağ Aksiyonlar & Hepsiemlak Screenshot #5 Popover Menüsü */
+/* Sağ Aksiyonlar */
 .navbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
+}
+
+.mobile-search-toggle-btn {
+  display: none;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border-default);
+  background-color: var(--color-bg-surface-alt);
+  color: var(--color-text-dark);
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-search-toggle-btn.is-open {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+/* Mobilde Büyütece Basınca Navbar Altında Açılan Arama Barı */
+.mobile-search-dropbar {
+  position: sticky;
+  top: var(--navbar-height);
+  z-index: 940;
+  background-color: var(--color-bg-surface);
+  border-bottom: 1.5px solid var(--color-border-default);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-sm);
+}
+
+.mobile-search-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  padding: 0 12px;
+  margin-left: 6px;
+  border-radius: 7px;
+  border: none;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.mobile-search-submit-btn:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.user-popover-cta-btn {
+  display: none;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: none;
+  background-color: var(--color-primary);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  box-shadow: 0 2px 0 var(--color-primary-hover);
+}
+
+.user-popover-cta-btn:hover {
+  background-color: var(--color-primary-hover);
 }
 
 .user-popover-anchor {
@@ -178,11 +298,11 @@
 .user-trigger-pill {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  height: 40px;
-  padding: 0 14px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-default);
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px 0 8px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--color-border-default);
   background-color: var(--color-bg-surface);
   cursor: pointer;
   transition: all 0.16s ease;
@@ -190,50 +310,30 @@
 }
 
 .user-trigger-pill:hover {
-  border-color: var(--color-primary-border);
+  border-color: var(--color-primary);
   box-shadow: var(--shadow-xs);
 }
 
-.user-trigger-text {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  line-height: 1.15;
-  text-align: left;
-}
-
-.user-trigger-top {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--color-text-muted);
-}
-
-.user-trigger-bottom {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--color-primary);
-}
-
-/* Screenshot #5 Popover Card */
+/* Sağ Kenara Hizalı, Ekran Dışına Asla Taşmayan Popover Menüsü */
 .user-popover-card {
   position: absolute;
-  top: calc(100% + 10px);
+  top: calc(100% + 8px);
   right: 0;
-  width: 248px;
+  width: min(260px, calc(100vw - 24px));
   background-color: var(--color-bg-surface);
-  border: 1px solid var(--color-border-default);
+  border: 1.5px solid var(--color-border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
-  padding: 16px;
+  padding: 12px;
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   animation: modal-pop-in 0.15s ease-out;
 }
 
 .user-popover-header {
-  padding-bottom: 10px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--color-border-default);
 }
 
@@ -290,25 +390,83 @@
   margin: 4px 0;
 }
 
-.mobile-menu-btn {
-  display: none;
-}
-
-@media (max-width: 1080px) {
-  .navbar-links {
+/* Tablet ve Mobil: Menü İsimleri Gizlenir, Sadece İkonlar Sığar */
+@media (max-width: 960px) {
+  .navbar-link-label {
     display: none;
   }
-  .mobile-menu-btn {
-    display: inline-flex;
+  .navbar-link-item {
+    width: 36px;
+    height: 36px;
+    padding: 0;
   }
-}
-
-@media (max-width: 720px) {
-  .app-navbar-inner {
-    padding: 0 14px;
+  .navbar-left-cluster {
     gap: 10px;
   }
-  .navbar-search-wrap {
+}
+
+/* Mobil (<= 768px): Kompakt GİB [e-emlak] Logosu + İkon Menüler + Büyüteç + En Sağda PP Avatar */
+@media (max-width: 768px) {
+  .app-navbar-inner {
+    padding: 0 10px;
+    gap: 6px;
+  }
+  .brand-logo-link {
+    gap: 4px;
+  }
+  .brand-gib-text {
+    font-size: 17px;
+  }
+  .brand-eemlak-box {
+    display: inline-flex;
+    font-size: 11px;
+    padding: 3px 6px 3px 5px;
+    border-width: 1.8px;
+  }
+  .brand-eemlak-box::before,
+  .brand-eemlak-box::after {
+    width: 1.8px;
+  }
+  .navbar-left-cluster {
+    gap: 8px;
+  }
+  .navbar-links {
+    gap: 2px;
+  }
+  .navbar-link-item {
+    width: 32px;
+    height: 32px;
+  }
+  .navbar-center-slot {
     display: none;
+  }
+  .mobile-search-toggle-btn {
+    display: inline-flex;
+    width: 32px;
+    height: 32px;
+  }
+  .navbar-cta-btn,
+  .nav-cta-text,
+  .user-trigger-label {
+    display: none !important;
+  }
+  .user-popover-cta-btn {
+    display: inline-flex;
+  }
+  .user-trigger-pill {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    justify-content: center;
+    border: none;
+    background-color: transparent;
+    border-radius: 50%;
+  }
+  .user-trigger-pill:hover {
+    border: none;
+    box-shadow: none;
+  }
+  .navbar-actions {
+    gap: 6px;
   }
 }

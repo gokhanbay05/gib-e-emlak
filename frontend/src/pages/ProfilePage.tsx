@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Building2,
   Calendar,
+  Camera,
   FileText,
   Heart,
   Lock,
   LogOut,
+  MessageSquare,
   ShieldCheck,
   Trash2,
 } from 'lucide-react';
@@ -15,7 +17,9 @@ import {
   fetchCalendarOverview,
 } from '../api/appointments';
 import { updateProfile } from '../api/auth';
+import { ensureChatThread, uploadAvatarFile } from '../api/engagement';
 import { fetchFavorites, removeFavorite } from '../api/favorites';
+import ChatPanel from '../components/chat/ChatPanel';
 import {
   Avatar,
   Badge,
@@ -71,7 +75,7 @@ export function ProfilePage({
 }: ProfilePageProps) {
   const isAgent = session.role === 'AGENT';
   const [activeTab, setActiveTab] = useState<ProfileTabKey>(
-    isAgent ? 'security' : initialTab,
+    isAgent ? (initialTab === 'messages' ? 'messages' : 'security') : initialTab,
   );
 
   const [favorites, setFavorites] = useState<FavoriteItemRecord[]>([]);
@@ -89,39 +93,61 @@ export function ProfilePage({
   const [email, setEmail] = useState(session.email);
   const [phone, setPhone] = useState(session.phone);
   const [newPassword, setNewPassword] = useState('');
+  const [avatarUrl, setAvatarUrl] = useState(session.avatar_url || '');
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
-  // GeoSocial tarzı Şifre Doğrulama Modalı
+  // GeoSocial tarzı Şifre Doğrulama Modalı & İptal Nedeni Modalı
   const [passwordModalOpen, setPasswordModalOpen] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [selectedChatThreadId, setSelectedChatThreadId] = useState<number | null>(
+    null,
+  );
+  const [cancelTarget, setCancelTarget] =
+    useState<CalendarAppointmentRecord | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [appointmentStatusFilter, setAppointmentStatusFilter] = useState<
+    'ALL' | 'AKTIF' | 'TAMAMLANDI' | 'IPTAL_EDILDI'
+  >('ALL');
 
   useEffect(() => {
-    setActiveTab(isAgent ? 'security' : initialTab);
+    setActiveTab(
+      isAgent ? (initialTab === 'messages' ? 'messages' : 'security') : initialTab,
+    );
   }, [initialTab, isAgent]);
 
   useEffect(() => {
+    setAvatarUrl(session.avatar_url || '');
+  }, [session.avatar_url]);
+
+  useEffect(() => {
     if (isAgent || !session.id) return;
-    void fetchFavorites(session.id)
-      .then((res) => setFavorites(res.favorites))
-      .catch(() => {});
+    const loadCustomerData = () => {
+      void fetchFavorites(session.id)
+        .then((res) => setFavorites(res.favorites))
+        .catch(() => {});
 
-    void fetchCalendarOverview({ agency_id: 1 })
-      .then((res) => {
-        const mine = res.appointments.filter(
-          (a) =>
-            a.customer_name
-              .toLocaleLowerCase('tr-TR')
-              .includes(session.full_name.toLocaleLowerCase('tr-TR')) ||
-            a.customer_id === session.customer?.id,
-        );
-        setAppointments(mine.length > 0 ? mine : res.appointments.slice(0, 3));
-      })
-      .catch(() => {});
+      if (session.customer?.id) {
+        void fetchCalendarOverview({
+          agency_id: 0,
+          customer_id: session.customer.id,
+        })
+          .then((res) => {
+            setAppointments(res.appointments);
+          })
+          .catch(() => {});
 
-    void fetchAgencySellRequests(1)
-      .then((res) => setSellRequests(res.sell_requests))
-      .catch(() => {});
+        void fetchAgencySellRequests(0, session.customer.id)
+          .then((res) => setSellRequests(res.sell_requests))
+          .catch(() => {});
+      }
+    };
+
+    loadCustomerData();
+    window.addEventListener('focus', loadCustomerData);
+    return () => window.removeEventListener('focus', loadCustomerData);
   }, [session, isAgent]);
 
   const handleRemoveFavorite = async (propertyId: number) => {
@@ -130,16 +156,41 @@ export function ProfilePage({
     onNotify('İlan favorilerinizden çıkarıldı.');
   };
 
-  const handleCancelAppointment = async (appointmentId: number) => {
+  const handleConfirmCancelAppointment = async () => {
+    if (!cancelTarget) return;
+    setSaving(true);
     try {
-      const res = await cancelAppointment(appointmentId);
+      const res = await cancelAppointment(cancelTarget.id, cancelReason.trim());
       setAppointments((prev) =>
-        prev.map((a) => (a.id === appointmentId ? res.appointment : a)),
+        prev.map((a) => (a.id === cancelTarget.id ? res.appointment : a)),
       );
+      setCancelTarget(null);
+      setCancelReason('');
       onNotify(res.message);
     } catch (err) {
       onNotify(
         err instanceof Error ? err.message : 'Randevu iptal edilemedi.',
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenAppointmentChat = async (appt: CalendarAppointmentRecord) => {
+    if (!session.customer?.id) return;
+    try {
+      const res = await ensureChatThread({
+        agency_id: appt.agency_id,
+        customer_id: session.customer.id,
+        property_id: appt.property_id,
+        advisor_name: appt.advisor_name,
+      });
+      setSelectedChatThreadId(res.thread.id);
+      setActiveTab('messages');
+      onTabChange?.('messages');
+    } catch (err) {
+      onNotify(
+        err instanceof Error ? err.message : 'Sohbet odası açılamadı.',
       );
     }
   };
@@ -157,6 +208,7 @@ export function ProfilePage({
         last_name: lastName.trim(),
         email: email.trim(),
         phone: phone.trim(),
+        avatar_url: avatarUrl || undefined,
         current_password: currentPassword,
         new_password: newPassword.trim() || undefined,
       });
@@ -174,8 +226,32 @@ export function ProfilePage({
     }
   };
 
+  const handleAvatarSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadingAvatar(true);
+    try {
+      const res = await uploadAvatarFile(file);
+      setAvatarUrl(res.url);
+      onSessionUpdate({ ...session, avatar_url: res.url });
+      onNotify('Profil fotoğrafı yüklendi! Kalıcı kayıt için "Bilgilerimi Güncelle" ile onaylayabilirsiniz.');
+    } catch (err) {
+      onNotify(
+        err instanceof Error ? err.message : 'Fotoğraf yüklenemedi.',
+      );
+    } finally {
+      setUploadingAvatar(false);
+      e.target.value = '';
+    }
+  };
+
   const tabItems = isAgent
     ? [
+        {
+          value: 'messages',
+          label: 'Müşteri Mesajları',
+          icon: <MessageSquare size={15} />,
+        },
         {
           value: 'security',
           label: 'Hesap Bilgilerim & Güvenlik',
@@ -200,6 +276,11 @@ export function ProfilePage({
           label: 'Satış & Kiralama Başvurularım',
           icon: <FileText size={15} />,
           count: sellRequests.length,
+        },
+        {
+          value: 'messages',
+          label: 'Mesajlarım',
+          icon: <MessageSquare size={15} />,
         },
         {
           value: 'security',
@@ -235,9 +316,9 @@ export function ProfilePage({
             flexWrap: 'wrap',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <Avatar name={session.full_name} size="lg" />
-            <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
+            <Avatar src={avatarUrl || session.avatar_url} name={session.full_name} size="lg" />
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontSize: '18px', fontWeight: 800 }}>
                 {session.full_name}
               </div>
@@ -247,13 +328,15 @@ export function ProfilePage({
                   color: 'var(--color-text-muted)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '10px',
+                  flexWrap: 'wrap',
+                  gap: '6px 10px',
                   marginTop: '2px',
+                  wordBreak: 'break-word',
                 }}
               >
                 <span>{session.email}</span>
                 <span>•</span>
-                <span>{session.phone}</span>
+                <span style={{ whiteSpace: 'nowrap' }}>{session.phone}</span>
               </div>
             </div>
           </div>
@@ -314,6 +397,36 @@ export function ProfilePage({
       {/* Sekme 2: Randevularım */}
       {!isAgent && activeTab === 'appointments' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {appointments.length > 0 && (
+            <Tabs
+              variant="pills"
+              value={appointmentStatusFilter}
+              onChange={(v) =>
+                setAppointmentStatusFilter(
+                  v as 'ALL' | 'AKTIF' | 'TAMAMLANDI' | 'IPTAL_EDILDI',
+                )
+              }
+              items={[
+                { value: 'ALL', label: 'Tümü', count: appointments.length },
+                {
+                  value: 'AKTIF',
+                  label: 'Aktif',
+                  count: appointments.filter((a) => a.status === 'AKTIF').length,
+                },
+                {
+                  value: 'TAMAMLANDI',
+                  label: 'Tamamlandı',
+                  count: appointments.filter((a) => a.status === 'TAMAMLANDI').length,
+                },
+                {
+                  value: 'IPTAL_EDILDI',
+                  label: 'İptal',
+                  count: appointments.filter((a) => a.status === 'IPTAL_EDILDI').length,
+                },
+              ]}
+            />
+          )}
+
           {appointments.length === 0 ? (
             <Card padding="lg">
               <div style={{ textAlign: 'center', color: 'var(--color-text-muted)' }}>
@@ -321,7 +434,13 @@ export function ProfilePage({
               </div>
             </Card>
           ) : (
-            appointments.map((appt) => (
+            appointments
+              .filter(
+                (a) =>
+                  appointmentStatusFilter === 'ALL' ||
+                  a.status === appointmentStatusFilter,
+              )
+              .map((appt) => (
               <Card key={appt.id}>
                 <div
                   style={{
@@ -336,9 +455,10 @@ export function ProfilePage({
                     <div
                       style={{
                         display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        marginBottom: '4px',
+                        flexDirection: 'column',
+                        alignItems: 'flex-start',
+                        gap: '6px',
+                        marginBottom: '6px',
                       }}
                     >
                       <Badge
@@ -349,10 +469,11 @@ export function ProfilePage({
                               ? 'danger'
                               : 'neutral'
                         }
+                        style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                       >
                         {formatAppointmentStatusLabel(appt.status)}
                       </Badge>
-                      <span style={{ fontWeight: 700, fontSize: '14.5px' }}>
+                      <span style={{ fontWeight: 700, fontSize: '14.5px', lineHeight: 1.35 }}>
                         {appt.property_title ||
                           formatAppointmentPurposeLabel(appt.purpose)}
                       </span>
@@ -379,17 +500,34 @@ export function ProfilePage({
                     )}
                   </div>
 
-                  {appt.status === 'AKTIF' && (
-                    <Button
-                      variant="danger"
-                      size="sm"
-                      pill
-                      leftIcon={<Trash2 size={14} />}
-                      onClick={() => void handleCancelAppointment(appt.id)}
-                    >
-                      Randevuyu İptal Et
-                    </Button>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {appt.status !== 'IPTAL_EDILDI' && (
+                      <Button
+                        variant="outline-primary"
+                        size="sm"
+                        pill
+                        leftIcon={<MessageSquare size={14} />}
+                        onClick={() => void handleOpenAppointmentChat(appt)}
+                      >
+                        Sohbeti Aç
+                      </Button>
+                    )}
+
+                    {appt.status === 'AKTIF' && (
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        pill
+                        leftIcon={<Trash2 size={14} />}
+                        onClick={() => {
+                          setCancelTarget(appt);
+                          setCancelReason('');
+                        }}
+                      >
+                        Randevuyu İptal Et
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </Card>
             ))
@@ -460,9 +598,62 @@ export function ProfilePage({
         </div>
       )}
 
+      {/* Sekme: Uygulama İçi Mesajlar */}
+      {activeTab === 'messages' && (
+        <ChatPanel
+          session={session}
+          initialThreadId={selectedChatThreadId}
+          onNotify={onNotify}
+        />
+      )}
+
       {/* Sekme 4: Hesap Bilgilerim & Güvenlik (Şifre Doğrulamalı) */}
       {activeTab === 'security' && (
         <Card padding="lg">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap',
+              paddingBottom: '18px',
+              marginBottom: '18px',
+              borderBottom: '1px solid var(--color-border-default)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <Avatar src={avatarUrl || session.avatar_url} name={session.full_name} size="xl" />
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '15px' }}>
+                  Profil Fotoğrafı
+                </div>
+                <div style={{ fontSize: '12.5px', color: 'var(--color-text-muted)' }}>
+                  Mesajlaşma ve değerlendirmelerde görünecek profil görseliniz (PNG / JPG / WebP)
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', width: '100%' }}>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={(e) => void handleAvatarSelected(e)}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                pill
+                disabled={uploadingAvatar}
+                leftIcon={<Camera size={15} />}
+                onClick={() => avatarInputRef.current?.click()}
+              >
+                {uploadingAvatar ? 'Yükleniyor...' : 'Fotoğraf Seç & Yükle'}
+              </Button>
+            </div>
+          </div>
+
           <h3 style={{ margin: '0 0 16px', fontSize: '17px', fontWeight: 700 }}>
             Kişisel Bilgiler ve Güvenlik Ayarları
           </h3>
@@ -515,7 +706,7 @@ export function ProfilePage({
                 gap: '12px',
               }}
             >
-              <Building2 size={20} color="var(--color-primary)" />
+              <Building2 size={20} color="var(--color-primary)" style={{ flexShrink: 0 }} />
               <div>
                 <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
                   Bağlı Kurumsal İşletme: {session.agency.name}
@@ -588,8 +779,7 @@ export function ProfilePage({
             }}
           >
             Hesap bilgilerinizdeki değişiklikleri kaydetmek için lütfen mevcut
-            şifrenizi giriniz. (Demo şifresi:{' '}
-            <strong>{isAgent ? 'Kurumsal123!' : 'Musteri123!'}</strong>)
+            şifrenizi giriniz.
           </p>
           <Input
             label="Mevcut Şifreniz"
@@ -614,6 +804,54 @@ export function ProfilePage({
             </div>
           )}
         </div>
+      </Modal>
+
+      {/* Randevu İptal Onay & Danışmana İptal Nedeni Bildirim Modalı */}
+      <Modal
+        isOpen={Boolean(cancelTarget)}
+        onClose={() => setCancelTarget(null)}
+        title="Randevuyu İptal Et"
+        size="sm"
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', width: '100%' }}>
+            <Button
+              variant="outline"
+              size="sm"
+              pill
+              disabled={saving}
+              onClick={() => setCancelTarget(null)}
+            >
+              Vazgeç
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              pill
+              disabled={saving}
+              onClick={() => void handleConfirmCancelAppointment()}
+            >
+              {saving ? 'İptal Ediliyor...' : 'İptali Onayla'}
+            </Button>
+          </div>
+        }
+      >
+        {cancelTarget && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ fontSize: '13.5px', color: 'var(--color-text-body)', lineHeight: 1.5 }}>
+              <strong>{cancelTarget.property_title || 'Gayrimenkul Gösterimi'}</strong>{' '}
+              randevunuzu ({formatDateTimeTR(cancelTarget.start_time)}) iptal etmek üzeresiniz.
+              Danışmanınıza otomatik bildirim gönderilecektir.
+            </div>
+            <Input
+              label="İptal Nedeni (Opsiyonel)"
+              multiline
+              rows={2}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Örn: Programım değişti, farklı bir gün tekrar planlayacağım..."
+            />
+          </div>
+        )}
       </Modal>
     </PageContainer>
   );

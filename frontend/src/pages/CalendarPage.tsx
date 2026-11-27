@@ -13,6 +13,7 @@ import {
   fetchCalendarOverview,
   updateAppointmentDetails,
 } from '../api/appointments';
+import { updateAgencyWorkingHours } from '../api/agencies';
 import {
   Badge,
   Button,
@@ -22,7 +23,8 @@ import {
   Tabs,
 } from '../components/core';
 import { PageContainer } from '../components/layout';
-import { cn } from '../lib/utils';
+import { getAdvisorsForAgency } from '../lib/advisors';
+import { cn, toIstanbulDateKey, toIstanbulTimeHHMM } from '../lib/utils';
 import type {
   BlockedSlotRecord,
   CalendarAppointmentRecord,
@@ -64,22 +66,20 @@ function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function extractTimeHHMM(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('tr-TR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
 /**
  * macOS Apple Calendar mimarisinde Tam Sayfa 7 Sütunlu Aylık / Haftalık Randevu Takvimi.
- * Gün hücrelerinin içinde doğrudan renkli randevu ve kapalı saat hapları görünür;
- * tıklanınca detay/düzenleme veya tek seferde saat aralığı kapatma modalı açılır.
+ * Danışman bazlı filtreleme, +03:00 saat standardı ve veritabanına kalıcı mesai saat/gün kaydı sunar.
  */
 export function CalendarPage({ session, onNotify }: CalendarPageProps) {
   const agencyId = session.agency?.id ?? 1;
+  const advisors = useMemo(() => getAdvisorsForAgency(agencyId), [agencyId]);
+  const currentAdvisor = advisors.find((a) => a.full_name === session.full_name);
+  const isCalendarManager = Boolean(
+    currentAdvisor?.is_founder || currentAdvisor?.can_manage_office,
+  );
+  const [selectedAdvisor, setSelectedAdvisor] = useState<string>(() =>
+    isCalendarManager ? 'ALL' : session.full_name,
+  );
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [cursorDate, setCursorDate] = useState<Date>(() => new Date());
 
@@ -88,9 +88,17 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
   );
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlotRecord[]>([]);
 
-  // Mesai Saatleri Ayarı
+  // Mesai Saatleri ve Günleri Ayarı (Kalıcı DB)
   const [workStart, setWorkStart] = useState('09:00');
   const [workEnd, setWorkEnd] = useState('18:00');
+  const [workingDays, setWorkingDays] = useState<string[]>([
+    'Pzt',
+    'Sal',
+    'Çar',
+    'Per',
+    'Cum',
+    'Cmt',
+  ]);
   const [workModalOpen, setWorkModalOpen] = useState(false);
 
   // Seçili Randevu Düzenleme Modalı
@@ -111,9 +119,19 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
 
   const loadCalendarData = async () => {
     try {
-      const res = await fetchCalendarOverview({ agency_id: agencyId });
+      const res = await fetchCalendarOverview({
+        agency_id: agencyId,
+        advisor_name: selectedAdvisor !== 'ALL' ? selectedAdvisor : undefined,
+      });
       setAppointments(res.appointments);
       setBlockedSlots(res.blocked_slots);
+      if (res.working_hours) {
+        setWorkStart(`${String(res.working_hours.start_hour).padStart(2, '0')}:00`);
+        setWorkEnd(`${String(res.working_hours.end_hour).padStart(2, '0')}:00`);
+        if (Array.isArray(res.working_hours.working_days)) {
+          setWorkingDays(res.working_hours.working_days);
+        }
+      }
     } catch {
       // ignore
     }
@@ -121,7 +139,18 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
 
   useEffect(() => {
     void loadCalendarData();
-  }, [agencyId]);
+    const handleFocus = () => {
+      if (document.visibilityState === 'visible') {
+        void loadCalendarData();
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleFocus);
+    };
+  }, [agencyId, selectedAdvisor]);
 
   // Aylık 42 günlük (6 hafta x 7 gün) veya Haftalık 7 günlük ızgara hücrelerini üret
   const calendarDays = useMemo(() => {
@@ -164,13 +193,13 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
     > = {};
 
     for (const appt of appointments) {
-      const key = appt.start_time.slice(0, 10);
+      const key = toIstanbulDateKey(appt.start_time);
       if (!map[key]) map[key] = { appointments: [], blocked: [] };
       map[key].appointments.push(appt);
     }
 
     for (const blk of blockedSlots) {
-      const key = blk.start_time.slice(0, 10);
+      const key = toIstanbulDateKey(blk.start_time);
       if (!map[key]) map[key] = { appointments: [], blocked: [] };
       map[key].blocked.push(blk);
     }
@@ -224,10 +253,11 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
     setSubmitting(true);
     try {
       for (let h = startH; h < endH; h++) {
-        const sIso = `${blockDate}T${String(h).padStart(2, '0')}:00:00`;
-        const eIso = `${blockDate}T${String(h + 1).padStart(2, '0')}:00:00`;
+        const sIso = `${blockDate}T${String(h).padStart(2, '0')}:00:00+03:00`;
+        const eIso = `${blockDate}T${String(h + 1).padStart(2, '0')}:00:00+03:00`;
         await createBlockedSlot({
           agency_id: agencyId,
+          advisor_name: selectedAdvisor !== 'ALL' ? selectedAdvisor : undefined,
           start_time: sIso,
           end_time: eIso,
           reason: blockReason.trim() || 'Manuel Kapatılan Mesai Aralığı',
@@ -261,9 +291,39 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
     }
   };
 
+  const handleSaveWorkingHours = async () => {
+    const startH = Number(workStart.split(':')[0]);
+    const endH = Number(workEnd.split(':')[0]);
+    if (endH <= startH) {
+      onNotify('Mesai bitiş saati başlangıçtan büyük olmalıdır.');
+      return;
+    }
+    if (workingDays.length === 0) {
+      onNotify('En az bir çalışma günü seçmelisiniz.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await updateAgencyWorkingHours(agencyId, {
+        start_hour: startH,
+        end_hour: endH,
+        working_days: workingDays,
+      });
+      setWorkingDays(res.working_hours.working_days);
+      setWorkModalOpen(false);
+      onNotify(res.message);
+    } catch (err) {
+      onNotify(
+        err instanceof Error ? err.message : 'Mesai saatleri güncellenemedi.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const todayKey = toDateKey(new Date());
 
-  const HOUR_OPTIONS = Array.from({ length: 13 }, (_, i) => {
+  const HOUR_OPTIONS = Array.from({ length: 14 }, (_, i) => {
     const h = String(8 + i).padStart(2, '0');
     return { value: `${h}:00`, label: `${h}:00` };
   });
@@ -274,14 +334,31 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
       title="Randevu Takvimi"
       actions={
         <>
+          {isCalendarManager && (
+            <Select
+              selectSize="sm"
+              pill
+              inline
+              value={selectedAdvisor}
+              onChange={setSelectedAdvisor}
+              options={[
+                { value: 'ALL', label: 'Danışman: Tümü' },
+                ...advisors.map((a) => ({
+                  value: a.full_name,
+                  label: `Danışman: ${a.full_name}`,
+                })),
+              ]}
+            />
+          )}
           <Button
             variant="outline"
             size="sm"
             pill
             leftIcon={<Clock size={14} />}
             onClick={() => setWorkModalOpen(true)}
+            title={`Mesai (${workStart} - ${workEnd} • ${workingDays.length} gün)`}
           >
-            Mesai Saatleri ({workStart} - {workEnd})
+            Mesai Ayarları
           </Button>
           <Button
             variant="primary"
@@ -311,8 +388,8 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
             value={viewMode}
             onChange={(v) => setViewMode(v as 'month' | 'week')}
             items={[
-              { value: 'month', label: 'Ay Görünümü' },
-              { value: 'week', label: 'Hafta Görünümü' },
+              { value: 'month', label: 'Ay' },
+              { value: 'week', label: 'Hafta' },
             ]}
           />
 
@@ -343,22 +420,25 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
           </div>
         </div>
 
-        {/* Haftanın Günleri Başlığı */}
-        <div className="apple-cal-weekdays">
-          {WEEKDAYS_TR.map((dayName) => (
-            <div key={dayName} className="apple-cal-weekday-cell">
-              {dayName}
-            </div>
-          ))}
-        </div>
+        {/* Sadece Takvim Izgarası Mobilde Yatay Kaydırılabilir (Toolbar Sabit Kalır) */}
+        <div className="apple-cal-grid-scroll">
+          {/* Haftanın Günleri Başlığı */}
+          <div className="apple-cal-weekdays">
+            {WEEKDAYS_TR.map((dayName) => (
+              <div key={dayName} className="apple-cal-weekday-cell">
+                {dayName}
+              </div>
+            ))}
+          </div>
 
-        {/* 7 Sütunlu Apple Calendar Gün Hücreleri Izgarası */}
-        <div className="apple-cal-grid">
+          {/* 7 Sütunlu Apple Calendar Gün Hücreleri Izgarası */}
+          <div className="apple-cal-grid">
           {calendarDays.map(({ date, inMonth }) => {
             const key = toDateKey(date);
             const isToday = key === todayKey;
             const dayOfWeek = (date.getDay() + 6) % 7;
-            const isWeekend = dayOfWeek >= 5;
+            const dayLabel = WEEKDAYS_TR[dayOfWeek];
+            const isClosedDay = !workingDays.includes(dayLabel);
             const dayEvents = eventsByDate[key];
 
             return (
@@ -367,7 +447,7 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
                 className={cn(
                   'apple-cal-day-cell',
                   !inMonth && 'is-outside-month',
-                  isWeekend && 'is-weekend',
+                  isClosedDay && 'is-weekend',
                 )}
                 onClick={() => {
                   setBlockDate(key);
@@ -410,7 +490,7 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
                           ● {appt.customer_name}
                         </span>
                         <span className="apple-cal-event-time">
-                          {extractTimeHHMM(appt.start_time)}
+                          {toIstanbulTimeHHMM(appt.start_time)}
                         </span>
                       </button>
                     );
@@ -431,7 +511,7 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
                         Kapalı: {blk.reason}
                       </span>
                       <span className="apple-cal-event-time">
-                        {extractTimeHHMM(blk.start_time)}
+                        {toIstanbulTimeHHMM(blk.start_time)}
                       </span>
                     </button>
                   ))}
@@ -439,6 +519,7 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
               </div>
             );
           })}
+          </div>
         </div>
       </div>
 
@@ -490,6 +571,9 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
               <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 {formatDateTimeTR(selectedAppt.start_time)} •{' '}
                 {formatAppointmentTypeLabel(selectedAppt.appointment_type)}
+                {selectedAppt.advisor_name
+                  ? ` • Danışman: ${selectedAppt.advisor_name}`
+                  : ''}
               </div>
             </div>
 
@@ -617,40 +701,73 @@ export function CalendarPage({ session, onNotify }: CalendarPageProps) {
         )}
       </Modal>
 
-      {/* Modal 4: Kurumsal Mesai Saatleri Ayarı */}
+      {/* Modal 4: Kurumsal Mesai Saatleri ve Çalışma Günleri Ayarı */}
       <Modal
         isOpen={workModalOpen}
         onClose={() => setWorkModalOpen(false)}
-        title="Kurumsal Mesai Saatleri"
+        title="Kurumsal Mesai Saatleri ve Çalışma Günleri"
         size="sm"
         footer={
           <Button
             variant="primary"
             pill
-            onClick={() => {
-              setWorkModalOpen(false);
-              onNotify(
-                `Ofis mesai saatleri ${workStart} - ${workEnd} olarak güncellendi.`,
-              );
-            }}
+            disabled={submitting}
+            onClick={() => void handleSaveWorkingHours()}
           >
-            Mesai Saatlerini Kaydet
+            {submitting ? 'Kaydediliyor...' : 'Mesai Ayarlarını Kaydet'}
           </Button>
         }
       >
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-          <Select
-            label="Mesai Başlangıcı"
-            value={workStart}
-            onChange={setWorkStart}
-            options={HOUR_OPTIONS}
-          />
-          <Select
-            label="Mesai Bitişi"
-            value={workEnd}
-            onChange={setWorkEnd}
-            options={HOUR_OPTIONS}
-          />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <Select
+              label="Mesai Başlangıcı (TSİ)"
+              value={workStart}
+              onChange={setWorkStart}
+              options={HOUR_OPTIONS}
+            />
+            <Select
+              label="Mesai Bitişi (TSİ)"
+              value={workEnd}
+              onChange={setWorkEnd}
+              options={HOUR_OPTIONS}
+            />
+          </div>
+
+          <div>
+            <div
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 700,
+                color: 'var(--color-text-secondary)',
+                marginBottom: '8px',
+              }}
+            >
+              Ofis Çalışma Günleri
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+              {WEEKDAYS_TR.map((day) => {
+                const active = workingDays.includes(day);
+                return (
+                  <Button
+                    key={day}
+                    variant={active ? 'primary' : 'outline'}
+                    size="sm"
+                    pill
+                    onClick={() =>
+                      setWorkingDays((prev) =>
+                        prev.includes(day)
+                          ? prev.filter((d) => d !== day)
+                          : [...prev, day],
+                      )
+                    }
+                  >
+                    {day}
+                  </Button>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </Modal>
     </PageContainer>

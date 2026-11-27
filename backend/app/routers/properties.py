@@ -114,25 +114,59 @@ GALLERY_PHOTO_POOL = [
     "https://images.unsplash.com/photo-1600585154526-990dced4db0d?w=900",
 ]
 
+# Türkiye'de tüm mahalleler için doğrulanmış kara içi koordinatları (Göl/deniz taşmasını önler)
+NEIGHBORHOOD_COORDS: dict[str, tuple[float, float]] = {
+    "Ayrancı Mah.": (39.9006, 32.8518),
+    "Bahçelievler Mah.": (39.9212, 32.8208),
+    "Alacaatlı Mah.": (39.8742, 32.6815),
+    "İncek Mah.": (39.8185, 32.7082),
+    "Söğütözü Mah.": (39.9114, 32.8112),
+    "Çukurambar Mah.": (39.9032, 32.8124),
+    "Beytepe Mah.": (39.8655, 32.7315),
+    "Yıldız Mah.": (39.8832, 32.8685),
+    "Turgut Özal Mah.": (39.9835, 32.7280),
+    "Göksu Mah.": (39.9852, 32.6345),
+    "Etlik Mah.": (39.9690, 32.8380),
+    "Akdere Mah.": (39.9145, 32.8930),
+    "Suadiye Mah.": (40.9612, 29.0825),
+    "Fenerbahçe Mah.": (40.9742, 29.0435),
+    "Acıbadem Mah.": (41.0068, 29.0455),
+    "Etiler Mah.": (41.0815, 29.0335),
+    "Barbaros Mah.": (40.9918, 29.1005),
+    "Zekeriyaköy Mah.": (41.1965, 29.0185),
+    "Merkez Mah.": (41.0785, 28.9725),
+    "Yenişehir Mah.": (40.9225, 29.3095),
+    "Bostanlı Mah.": (38.4585, 27.0975),
+    "Özkanlar Mah.": (38.4648, 27.2045),
+    "Alaçatı Mah.": (38.2845, 26.3775),
+    "Şirinyer Mah.": (38.3935, 27.1525),
+    "Alsancak Mah.": (38.4352, 27.1438),
+    "Hurma Mah.": (36.8548, 30.6025),
+    "Fener Mah.": (36.8588, 30.7680),
+}
+
 DISTRICT_COORDS: dict[str, tuple[float, float]] = {
     "Çankaya": (39.9035, 32.8597),
-    "Gölbaşı": (39.7956, 32.8065),
+    "Gölbaşı": (39.8185, 32.7082),
     "Yenimahalle": (39.9667, 32.8014),
     "Etimesgut": (39.9481, 32.6675),
-    "Keçiören": (39.9912, 32.8685),
+    "Keçiören": (39.9720, 32.8480),
     "Mamak": (39.9272, 32.9161),
     "Kadıköy": (40.9780, 29.0610),
-    "Beşiktaş": (41.0430, 29.0073),
-    "Ataşehir": (40.9923, 29.1244),
-    "Üsküdar": (41.0228, 29.0156),
-    "Sarıyer": (41.1667, 29.0500),
+    "Beşiktaş": (41.0640, 29.0180),
+    "Ataşehir": (40.9923, 29.1044),
+    "Üsküdar": (41.0228, 29.0356),
+    "Sarıyer": (41.1867, 29.0300),
+    "Kağıthane": (41.0785, 28.9725),
+    "Pendik": (40.9225, 29.3095),
     "Bakırköy": (40.9800, 28.8720),
-    "Karşıyaka": (38.4592, 27.1147),
+    "Karşıyaka": (38.4622, 27.1080),
     "Bornova": (38.4622, 27.2164),
-    "Konak": (38.4189, 27.1287),
-    "Çeşme": (38.3228, 26.3056),
-    "Muratpaşa": (36.8841, 30.7056),
-    "Konyaaltı": (36.8680, 30.6350),
+    "Buca": (38.3935, 27.1525),
+    "Konak": (38.4260, 27.1430),
+    "Çeşme": (38.2845, 26.3775),
+    "Muratpaşa": (36.8680, 30.7450),
+    "Konyaaltı": (36.8680, 30.6180),
 }
 
 CITY_COORDS: dict[str, tuple[float, float]] = {
@@ -143,7 +177,33 @@ CITY_COORDS: dict[str, tuple[float, float]] = {
 }
 
 
+DEFAULT_PROPERTY_FEATURES = [
+    "Çelik Kapı",
+    "Ankastre Mutfak",
+    "Balkon",
+    "Ebeveyn Banyosu",
+    "Parke & Seramik Zemin",
+    "Fiber İnternet",
+    "Açık & Kapalı Otopark",
+    "Asansör",
+    "7/24 Güvenlik & Kamera",
+    "Isı Yalıtımı (Mantolama)",
+]
+
+
 def _build_property_gallery(prop: Property) -> list[str]:
+    import json
+
+    if prop.images_json:
+        try:
+            parsed = json.loads(prop.images_json)
+            if isinstance(parsed, list):
+                valid = [str(u).strip() for u in parsed if str(u).strip()]
+                if valid:
+                    return valid
+        except Exception:
+            pass
+
     primary = (prop.image_url or "").strip() or GALLERY_PHOTO_POOL[0]
     gallery = [primary]
     seed_idx = (prop.id or 1) * 3
@@ -156,15 +216,32 @@ def _build_property_gallery(prop: Property) -> list[str]:
     return gallery
 
 
+def _parse_property_features(prop: Property) -> list[str]:
+    import json
+
+    if prop.features_json:
+        try:
+            parsed = json.loads(prop.features_json)
+            if isinstance(parsed, list):
+                return [str(f).strip() for f in parsed if str(f).strip()]
+        except Exception:
+            pass
+    if prop.property_type == "ARSA":
+        return ["Müstakil Tapulu", "İmarlı Parsel", "Yola Cepheli", "Altyapısı Hazır"]
+    return DEFAULT_PROPERTY_FEATURES
+
+
 def _resolve_property_coords(prop: Property) -> tuple[float, float]:
     base = (
-        DISTRICT_COORDS.get(prop.district)
+        NEIGHBORHOOD_COORDS.get(prop.neighborhood)
+        or DISTRICT_COORDS.get(prop.district)
         or CITY_COORDS.get(prop.city)
         or (39.9208, 32.8541)
     )
     pid = prop.id or 1
-    lat_jitter = (((pid * 37) % 19) - 9) * 0.0022
-    lng_jitter = (((pid * 53) % 23) - 11) * 0.0026
+    # Yaklaşık ~40-60 metrelik küçük cadde içi kaydırma (göl/deniz taşması riski yok)
+    lat_jitter = (((pid * 7) % 7) - 3) * 0.0004
+    lng_jitter = (((pid * 11) % 7) - 3) * 0.00045
     return round(base[0] + lat_jitter, 5), round(base[1] + lng_jitter, 5)
 
 
@@ -172,7 +249,29 @@ def serialize_property(prop: Property, db: Session) -> dict:
     owner = prop.owner_customer or db.get(Customer, prop.owner_customer_id)
     agency = prop.agency or db.get(Agency, prop.agency_id)
     gallery = _build_property_gallery(prop)
+    features = _parse_property_features(prop)
     lat, lng = _resolve_property_coords(prop)
+    building_age = (
+        prop.building_age
+        if prop.building_age is not None
+        else ((prop.id or 1) % 8) + 1
+    )
+    bathroom_count = (
+        prop.bathroom_count
+        if prop.bathroom_count is not None
+        else (2 if prop.gross_sqm >= 135 else 1)
+    )
+    is_credit_eligible = (
+        bool(prop.is_credit_eligible)
+        if prop.is_credit_eligible is not None
+        else (prop.listing_type == "SATILIK")
+    )
+    is_furnished = (
+        bool(prop.is_furnished) if prop.is_furnished is not None else False
+    )
+    deed_status = prop.deed_status or "Kat Mülkiyetli"
+    usage_status = prop.usage_status or "Boş / Hemen Teslim"
+
     return {
         "id": prop.id,
         "agency_id": prop.agency_id,
@@ -196,6 +295,14 @@ def serialize_property(prop: Property, db: Session) -> dict:
         "is_owner_id_verified": prop.is_owner_id_verified,
         "image_url": gallery[0],
         "images": gallery,
+        "building_age": building_age,
+        "bathroom_count": bathroom_count,
+        "is_credit_eligible": is_credit_eligible,
+        "is_furnished": is_furnished,
+        "deed_status": deed_status,
+        "usage_status": usage_status,
+        "features": features,
+        "advisor_name": prop.advisor_name or "",
         "latitude": lat,
         "longitude": lng,
         "created_at": prop.created_at.isoformat() if prop.created_at else "",
@@ -1048,10 +1155,29 @@ def create_property(
     owner.tc_identity_no = cleaned_tc
     owner.is_tc_verified = True
 
+    import json
+
+    cleaned_images = (
+        [u.strip() for u in (payload.images or []) if u and u.strip()]
+        if payload.images
+        else []
+    )
     assigned_image = (
         payload.image_url.strip()
         if payload.image_url and payload.image_url.strip()
-        else random.choice(DEFAULT_PROPERTY_IMAGES)
+        else (
+            cleaned_images[0]
+            if cleaned_images
+            else random.choice(DEFAULT_PROPERTY_IMAGES)
+        )
+    )
+    if assigned_image and assigned_image not in cleaned_images:
+        cleaned_images.insert(0, assigned_image)
+
+    cleaned_features = (
+        [f.strip() for f in (payload.features or []) if f and f.strip()]
+        if payload.features is not None
+        else DEFAULT_PROPERTY_FEATURES
     )
 
     new_prop = Property(
@@ -1075,6 +1201,23 @@ def create_property(
         status=payload.status.strip().upper(),
         is_owner_id_verified=True,
         image_url=assigned_image,
+        images_json=json.dumps(cleaned_images, ensure_ascii=False)
+        if cleaned_images
+        else None,
+        building_age=payload.building_age if payload.building_age is not None else 3,
+        bathroom_count=payload.bathroom_count
+        if payload.bathroom_count is not None
+        else 1,
+        is_credit_eligible=bool(payload.is_credit_eligible)
+        if payload.is_credit_eligible is not None
+        else True,
+        is_furnished=bool(payload.is_furnished)
+        if payload.is_furnished is not None
+        else False,
+        deed_status=(payload.deed_status or "Kat Mülkiyetli").strip(),
+        usage_status=(payload.usage_status or "Boş / Hemen Teslim").strip(),
+        features_json=json.dumps(cleaned_features, ensure_ascii=False),
+        advisor_name=(payload.advisor_name or "").strip() or None,
     )
     db.add(new_prop)
     db.commit()
@@ -1092,6 +1235,8 @@ def update_property(
     payload: PropertyUpdateRequest,
     db: Session = Depends(get_db),
 ) -> dict:
+    import json
+
     prop = db.get(Property, property_id)
     if prop is None:
         raise HTTPException(
@@ -1138,6 +1283,30 @@ def update_property(
             if payload.image_url.strip()
             else random.choice(DEFAULT_PROPERTY_IMAGES)
         )
+    if payload.images is not None:
+        cleaned_imgs = [u.strip() for u in payload.images if u and u.strip()]
+        prop.images_json = (
+            json.dumps(cleaned_imgs, ensure_ascii=False) if cleaned_imgs else None
+        )
+        if cleaned_imgs:
+            prop.image_url = cleaned_imgs[0]
+    if payload.building_age is not None:
+        prop.building_age = payload.building_age
+    if payload.bathroom_count is not None:
+        prop.bathroom_count = payload.bathroom_count
+    if payload.is_credit_eligible is not None:
+        prop.is_credit_eligible = bool(payload.is_credit_eligible)
+    if payload.is_furnished is not None:
+        prop.is_furnished = bool(payload.is_furnished)
+    if payload.deed_status is not None:
+        prop.deed_status = payload.deed_status.strip() or "Kat Mülkiyetli"
+    if payload.usage_status is not None:
+        prop.usage_status = payload.usage_status.strip() or "Boş / Hemen Teslim"
+    if payload.features is not None:
+        cleaned_feats = [f.strip() for f in payload.features if f and f.strip()]
+        prop.features_json = json.dumps(cleaned_feats, ensure_ascii=False)
+    if payload.advisor_name is not None:
+        prop.advisor_name = payload.advisor_name.strip() or None
 
     db.commit()
     db.refresh(prop)

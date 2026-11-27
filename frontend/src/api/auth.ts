@@ -67,6 +67,7 @@ export function updateProfile(
     phone: string;
     current_password: string;
     new_password?: string;
+    avatar_url?: string;
   },
 ): Promise<{ message: string; user: UserSession }> {
   return apiRequest<{ message: string; user: UserSession }>(

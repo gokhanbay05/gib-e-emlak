@@ -66,8 +66,48 @@ export function createAgencySellRequest(
 
 export function fetchAgencySellRequests(
   agencyId: number,
+  customerId?: number,
 ): Promise<{ sell_requests: AgencySellRequestSummary[] }> {
+  const qs = customerId ? `?customer_id=${customerId}` : '';
   return apiRequest<{ sell_requests: AgencySellRequestSummary[] }>(
-    `/api/agencies/${agencyId}/sell-requests`,
+    `/api/agencies/${agencyId}/sell-requests${qs}`,
   );
+}
+
+export function createAgencyAdvisorAccount(
+  agencyId: number,
+  payload: {
+    full_name: string;
+    phone: string;
+    email: string;
+    password: string;
+  },
+): Promise<{ message: string; user: { id: number; full_name: string; email: string } }> {
+  return apiRequest(`/api/agencies/${agencyId}/advisors`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateAgencyWorkingHours(
+  agencyId: number,
+  payload: {
+    start_hour: number;
+    end_hour: number;
+    working_days: string[];
+  },
+): Promise<{
+  message: string;
+  working_hours: {
+    start_hour: number;
+    end_hour: number;
+    working_days: string[];
+  };
+}> {
+  return apiRequest(`/api/agencies/${agencyId}/working-hours`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
 }

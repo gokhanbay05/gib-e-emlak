@@ -55,8 +55,8 @@ export function AuthPage({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   // Giriş
-  const [loginEmail, setLoginEmail] = useState('zeynep.kaya@ornek.com');
-  const [loginPassword, setLoginPassword] = useState('Musteri123!');
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Kayıt Ortak
   const [firstName, setFirstName] = useState('');
@@ -324,79 +324,12 @@ export function AuthPage({
                 </Button>
               </div>
 
-              {/* Hızlı Demo Giriş Bölümü (Screenshot #11 Sosyal Giriş stili) */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  margin: '4px 0',
-                }}
-              >
-                <div
-                  style={{
-                    flex: 1,
-                    height: '1px',
-                    backgroundColor: 'var(--color-border-default)',
-                  }}
-                />
-                <span
-                  style={{
-                    fontSize: '12px',
-                    color: 'var(--color-text-muted)',
-                    fontWeight: 500,
-                  }}
-                >
-                  Veya Hızlı Demo Hesap İle Bağlan
-                </span>
-                <div
-                  style={{
-                    flex: 1,
-                    height: '1px',
-                    backgroundColor: 'var(--color-border-default)',
-                  }}
-                />
-              </div>
-
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '10px',
-                }}
-              >
-                <Button
-                  variant="outline"
-                  size="md"
-                  leftIcon={<User size={15} color="var(--color-primary)" />}
-                  onClick={() =>
-                    void handleLogin('zeynep.kaya@ornek.com', 'Musteri123!')
-                  }
-                >
-                  Bireysel Müşteri
-                </Button>
-                <Button
-                  variant="outline"
-                  size="md"
-                  leftIcon={
-                    <Building2 size={15} color="var(--color-verified)" />
-                  }
-                  onClick={() =>
-                    void handleLogin(
-                      'selim@baskentvizyon.com.tr',
-                      'Kurumsal123!',
-                    )
-                  }
-                >
-                  Emlak Ofisi Paneli
-                </Button>
-              </div>
-
               <div
                 style={{
                   textAlign: 'center',
                   fontSize: '13px',
                   color: 'var(--color-text-body)',
+                  marginTop: '6px',
                 }}
               >
                 Üye Değil misiniz? Hızlıca{' '}
@@ -429,7 +362,7 @@ export function AuthPage({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
                   gap: '10px',
                 }}
               >
@@ -552,7 +485,7 @@ export function AuthPage({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
                   gap: '12px',
                 }}
               >
@@ -608,7 +541,7 @@ export function AuthPage({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
                   gap: '10px',
                 }}
               >
@@ -644,7 +577,7 @@ export function AuthPage({
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 190px), 1fr))',
                   gap: '12px',
                 }}
               >

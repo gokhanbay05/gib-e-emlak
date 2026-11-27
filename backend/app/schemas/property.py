@@ -22,6 +22,15 @@ class PropertyCreateRequest(BaseModel):
     agent_description: str
     status: str = "AKTIF"
     image_url: str | None = None
+    images: list[str] | None = None
+    building_age: int | None = 3
+    bathroom_count: int | None = 1
+    is_credit_eligible: bool | None = True
+    is_furnished: bool | None = False
+    deed_status: str | None = "Kat Mülkiyetli"
+    usage_status: str | None = "Boş / Hemen Teslim"
+    features: list[str] | None = None
+    advisor_name: str | None = None
 
 
 class PropertyUpdateRequest(BaseModel):
@@ -45,6 +54,15 @@ class PropertyUpdateRequest(BaseModel):
     agent_description: str
     status: str = "AKTIF"
     image_url: str | None = None
+    images: list[str] | None = None
+    building_age: int | None = 3
+    bathroom_count: int | None = 1
+    is_credit_eligible: bool | None = True
+    is_furnished: bool | None = False
+    deed_status: str | None = "Kat Mülkiyetli"
+    usage_status: str | None = "Boş / Hemen Teslim"
+    features: list[str] | None = None
+    advisor_name: str | None = None
 
 
 class PropertyStatusUpdateRequest(BaseModel):

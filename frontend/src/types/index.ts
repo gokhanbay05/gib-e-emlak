@@ -32,6 +32,7 @@ export interface UserSession {
   email: string;
   phone: string;
   role: 'AGENT' | 'CUSTOMER' | 'VISITOR';
+  avatar_url?: string;
   agency: SessionAgency | null;
   customer: SessionCustomer | null;
 }
@@ -54,6 +55,15 @@ export interface AgencyRecord {
   is_ttbs_verified: boolean;
   logo_url: string;
   description: string;
+  working_hours?: {
+    start_hour: number;
+    end_hour: number;
+    working_days: string[];
+  };
+  review_stats?: {
+    average: number;
+    count: number;
+  };
   stats: {
     property_count: number;
     active_property_count: number;
@@ -114,6 +124,14 @@ export interface CustomerOwnedProperty {
   is_owner_id_verified: boolean;
   image_url: string;
   images?: string[];
+  building_age?: number;
+  bathroom_count?: number;
+  is_credit_eligible?: boolean;
+  is_furnished?: boolean;
+  deed_status?: string;
+  usage_status?: string;
+  features?: string[];
+  advisor_name?: string;
   latitude?: number;
   longitude?: number;
   created_at: string;
@@ -241,6 +259,14 @@ export interface PropertyRecord {
   is_owner_id_verified: boolean;
   image_url: string;
   images?: string[];
+  building_age?: number;
+  bathroom_count?: number;
+  is_credit_eligible?: boolean;
+  is_furnished?: boolean;
+  deed_status?: string;
+  usage_status?: string;
+  features?: string[];
+  advisor_name?: string;
   latitude?: number;
   longitude?: number;
   created_at: string;
@@ -326,6 +352,7 @@ export interface SystemOverview {
 
 export type NavDestination =
   | 'agency'
+  | 'agencies-directory'
   | 'agency-storefront'
   | 'customers'
   | 'properties'
@@ -440,12 +467,17 @@ export interface CalendarAppointmentRecord {
   customer_name: string;
   customer_phone: string;
   customer_type: string;
+  advisor_name?: string;
   appointment_type: AppointmentType;
   purpose: AppointmentPurpose;
   start_time: string;
   end_time: string;
   status: AppointmentStatus;
   meeting_notes: string;
+  rating_dismissed?: boolean;
+  rating_submitted?: boolean;
+  cancelled_by?: string;
+  cancel_reason?: string;
   cancelled_at: string | null;
   can_cancel: boolean;
   hours_until_start: number;
@@ -456,6 +488,7 @@ export interface BlockedSlotRecord {
   [key: string]: unknown;
   id: number;
   agency_id: number;
+  advisor_name?: string;
   start_time: string;
   end_time: string;
   reason: string;
@@ -478,12 +511,62 @@ export interface CalendarOverviewResponse {
   working_hours: {
     start_hour: number;
     end_hour: number;
+    working_days?: string[];
   };
 }
 
 export interface BlockedSlotCreatePayload {
   agency_id: number;
+  advisor_name?: string;
   start_time: string;
   end_time: string;
   reason: string;
+}
+
+export interface AgencyReviewRecord {
+  id: number;
+  agency_id: number;
+  appointment_id: number | null;
+  reviewer_name: string;
+  advisor_name: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+}
+
+export interface PendingReviewItem {
+  appointment_id: number;
+  agency_id: number;
+  agency_name: string;
+  advisor_name: string;
+  property_title: string;
+  start_time: string;
+}
+
+export interface ChatThreadRecord {
+  id: number;
+  agency_id: number;
+  agency_name: string;
+  agency_logo: string;
+  customer_id: number;
+  customer_name: string;
+  customer_avatar: string;
+  property_id: number | null;
+  property_title: string;
+  appointment_id: number | null;
+  advisor_name: string;
+  thread_type: string;
+  subject: string;
+  last_message: string;
+  last_message_at: string;
+}
+
+export interface ChatMessageRecord {
+  id: number;
+  thread_id: number;
+  sender_role: 'CUSTOMER' | 'AGENT' | string;
+  sender_name: string;
+  sender_avatar: string;
+  content: string;
+  created_at: string;
 }

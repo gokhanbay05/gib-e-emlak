@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  CheckSquare,
   Edit3,
   ExternalLink,
   MapPin,
@@ -7,6 +8,7 @@ import {
   Printer,
   Search,
   ShieldCheck,
+  Square,
 } from 'lucide-react';
 import { fetchCustomers } from '../api/customers';
 import {
@@ -20,9 +22,9 @@ import {
   fetchProperties,
   updatePropertyById,
   updatePropertyStatus,
+  uploadPropertyImageFile,
 } from '../api/properties';
 import {
-  Badge,
   Button,
   Card,
   Input,
@@ -31,6 +33,10 @@ import {
   Tabs,
 } from '../components/core';
 import { PageContainer } from '../components/layout';
+import {
+  getAdvisorsForAgency,
+  getPropertyAdvisor,
+} from '../lib/advisors';
 import { formatPriceTL, getPropertyGallery } from '../lib/utils';
 import type {
   CustomerRecord,
@@ -59,10 +65,30 @@ export interface PropertiesPageProps {
   onNotify: (msg: string) => void;
 }
 
+const ALL_SELECTABLE_FEATURES = [
+  'Çelik Kapı',
+  'Ankastre Mutfak',
+  'Ebeveyn Banyosu',
+  'Balkon',
+  'Görüntülü Diafon',
+  'Fiber İnternet',
+  'Parke & Seramik Zemin',
+  'Vestiyer',
+  'Açık & Kapalı Otopark',
+  '7/24 Güvenlik & Kamera',
+  'Asansör',
+  'Isı Yalıtımı (Mantolama)',
+  'Çocuk Oyun Alanı',
+  'Jeneratör & Hidrofor',
+  'Açık / Kapalı Yüzme Havuzu',
+  'Akıllı Ev Sistemi',
+];
+
 /**
+ * Madde 8: İlan detay sayfasında yer alan tüm alanların (Bina Yaşı, Banyo Sayısı,
+ * Krediye Uygunluk, Eşya Durumu, Tapu Durumu, Kullanım Durumu, Sorumlu Danışman,
+ * Çoklu Fotoğraf ve İç/Dış Özellikler) gerçek veritabanına kaydedilip düzenlenebildiği
  * Kurumsal Portföy Yönetimi sayfası.
- * Yan çekmece (Drawer) veya başlık altı açıklama metni içermez;
- * yeni ilan ekleme ve düzenleme ortalanmış Modal ile çalışır.
  */
 export function PropertiesPage({
   session,
@@ -71,6 +97,8 @@ export function PropertiesPage({
   onNotify,
 }: PropertiesPageProps) {
   const agencyId = session.agency?.id ?? 1;
+  const advisors = useMemo(() => getAdvisorsForAgency(agencyId), [agencyId]);
+
   const [properties, setProperties] = useState<PropertyRecord[]>([]);
   const [counts, setCounts] = useState<PropertyCounts>({
     ALL: 0,
@@ -100,6 +128,18 @@ export function PropertiesPage({
   const [roomCount, setRoomCount] = useState('3+1');
   const [floorNumber, setFloorNumber] = useState('3');
   const [buildingFloors, setBuildingFloors] = useState('6');
+  const [buildingAge, setBuildingAge] = useState('3');
+  const [bathroomCount, setBathroomCount] = useState('1');
+  const [isCreditEligible, setIsCreditEligible] = useState('true');
+  const [isFurnished, setIsFurnished] = useState('false');
+  const [deedStatus, setDeedStatus] = useState('Kat Mülkiyetli');
+  const [usageStatus, setUsageStatus] = useState('Boş / Hemen Teslim');
+  const [advisorName, setAdvisorName] = useState(
+    advisors[0]?.full_name ?? 'Selim Karahan',
+  );
+  const [selectedFeatures, setSelectedFeatures] = useState<string[]>(
+    ALL_SELECTABLE_FEATURES.slice(0, 10),
+  );
   const [heatingType, setHeatingType] =
     useState<HeatingType>('DOGALGAZ_KOMBI');
   const [city, setCity] = useState('Ankara');
@@ -109,6 +149,7 @@ export function PropertiesPage({
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<PropertyStatus>('AKTIF');
   const [imageUrl, setImageUrl] = useState('');
+  const [extraImagesText, setExtraImagesText] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -175,6 +216,12 @@ export function PropertiesPage({
     });
   }, [properties, globalSearchQuery, localSearch]);
 
+  const toggleFeature = (feat: string) => {
+    setSelectedFeatures((prev) =>
+      prev.includes(feat) ? prev.filter((f) => f !== feat) : [...prev, feat],
+    );
+  };
+
   const openCreateModal = () => {
     const defaultOwner = customers[0];
     setEditingId(null);
@@ -189,6 +236,14 @@ export function PropertiesPage({
     setRoomCount('3+1');
     setFloorNumber('3');
     setBuildingFloors('6');
+    setBuildingAge('2');
+    setBathroomCount('2');
+    setIsCreditEligible('true');
+    setIsFurnished('false');
+    setDeedStatus('Kat Mülkiyetli');
+    setUsageStatus('Boş / Hemen Teslim');
+    setAdvisorName(advisors[0]?.full_name ?? 'Selim Karahan');
+    setSelectedFeatures(ALL_SELECTABLE_FEATURES.slice(0, 10));
     setHeatingType('DOGALGAZ_KOMBI');
     setCity('Ankara');
     setDistrict('Çankaya');
@@ -199,11 +254,13 @@ export function PropertiesPage({
     );
     setStatus('AKTIF');
     setImageUrl('');
+    setExtraImagesText('');
     setErrors({});
     setModalOpen(true);
   };
 
   const openEditModal = (p: PropertyRecord) => {
+    const adv = getPropertyAdvisor(p);
     setEditingId(p.id);
     setOwnerId(p.owner_customer_id);
     setOwnerTc(p.owner?.tc_identity_no || '14582930412');
@@ -216,6 +273,20 @@ export function PropertiesPage({
     setRoomCount(p.room_count);
     setFloorNumber(String(p.floor_number));
     setBuildingFloors(String(p.building_floors));
+    setBuildingAge(String(p.building_age ?? 3));
+    setBathroomCount(String(p.bathroom_count ?? 1));
+    setIsCreditEligible(
+      (p.is_credit_eligible ?? p.listing_type === 'SATILIK') ? 'true' : 'false',
+    );
+    setIsFurnished(p.is_furnished ? 'true' : 'false');
+    setDeedStatus(p.deed_status || 'Kat Mülkiyetli');
+    setUsageStatus(p.usage_status || 'Boş / Hemen Teslim');
+    setAdvisorName(p.advisor_name || adv.full_name);
+    setSelectedFeatures(
+      p.features && p.features.length > 0
+        ? p.features
+        : ALL_SELECTABLE_FEATURES.slice(0, 10),
+    );
     setHeatingType(p.heating_type);
     setCity(p.city);
     setDistrict(p.district);
@@ -224,12 +295,22 @@ export function PropertiesPage({
     setDescription(p.agent_description);
     setStatus(p.status);
     setImageUrl(p.image_url || '');
+    setExtraImagesText((p.images || []).slice(1).join('\n'));
     setErrors({});
     setModalOpen(true);
   };
 
   const handleSaveProperty = async () => {
     setErrors({});
+    const extraImgs = extraImagesText
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const allImages = [
+      ...(imageUrl.trim() ? [imageUrl.trim()] : []),
+      ...extraImgs,
+    ];
+
     const payload = {
       agency_id: agencyId,
       owner_customer_id: Number(ownerId),
@@ -243,6 +324,14 @@ export function PropertiesPage({
       room_count: roomCount as '1+0' | '1+1' | '2+1' | '3+1' | '4+1' | '5+1',
       floor_number: Number(floorNumber),
       building_floors: Number(buildingFloors),
+      building_age: Number(buildingAge) || 0,
+      bathroom_count: Math.max(1, Number(bathroomCount) || 1),
+      is_credit_eligible: isCreditEligible === 'true',
+      is_furnished: isFurnished === 'true',
+      deed_status: deedStatus,
+      usage_status: usageStatus,
+      advisor_name: advisorName,
+      features: selectedFeatures,
       heating_type: heatingType,
       city,
       district,
@@ -251,6 +340,7 @@ export function PropertiesPage({
       agent_description: description.trim(),
       status,
       image_url: imageUrl.trim() || null,
+      images: allImages.length > 0 ? allImages : undefined,
     };
 
     const parsed = propertySchema.safeParse(payload);
@@ -342,13 +432,13 @@ export function PropertiesPage({
 
           <div
             style={{
-              display: 'flex',
-              alignItems: 'center',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 160px), 1fr))',
               gap: '10px',
-              flexWrap: 'wrap',
+              width: '100%',
             }}
           >
-            <div style={{ width: '220px' }}>
+            <div style={{ gridColumn: '1 / -1' }}>
               <Input
                 inputSize="sm"
                 pill
@@ -388,31 +478,19 @@ export function PropertiesPage({
         </div>
       </Card>
 
-      {/* İlan Kartları Listesi (Kesilmeyen Başlıklı & Temiz Yatay Kartlar) */}
+      {/* İlan Kartları Listesi */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {filteredList.map((p) => {
           const thumb = getPropertyGallery(p)[0];
+          const adv = getPropertyAdvisor(p);
           return (
             <Card key={p.id} padding="sm">
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '130px minmax(0, 1fr) auto',
-                  gap: '16px',
-                  alignItems: 'center',
-                }}
-              >
+              <div className="portfolio-row-grid">
                 <img
                   src={thumb}
                   alt={p.title}
                   onClick={() => onSelectProperty(p)}
-                  style={{
-                    width: '130px',
-                    height: '92px',
-                    objectFit: 'cover',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                  }}
+                  className="portfolio-row-thumb"
                 />
 
                 <div style={{ minWidth: 0 }}>
@@ -480,6 +558,7 @@ export function PropertiesPage({
                       <MapPin size={13} color="var(--color-primary)" />
                       {p.district} / {p.city} ({p.neighborhood})
                     </span>
+                    <span>Danışman: <strong>{adv.full_name}</strong></span>
                     {p.owner && (
                       <span
                         style={{
@@ -507,6 +586,7 @@ export function PropertiesPage({
                   <Select
                     selectSize="sm"
                     pill
+                    inline
                     value={p.status}
                     onChange={(val) =>
                       void handleQuickStatusChange(
@@ -563,7 +643,7 @@ export function PropertiesPage({
         })}
       </div>
 
-      {/* Ortalanmış İlan Ekleme / Düzenleme Modalı (Yan Çekmece Yok!) */}
+      {/* Ortalanmış Tam Kapsamlı İlan Ekleme / Düzenleme Modalı */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -572,7 +652,7 @@ export function PropertiesPage({
             ? 'Gayrimenkul İlanını Düzenle'
             : 'Yeni Gayrimenkul İlanı Ekle'
         }
-        size="lg"
+        size="xl"
         footer={
           <>
             <Button
@@ -593,11 +673,12 @@ export function PropertiesPage({
           </>
         }
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* 1. Mülk Sahibi & Sorumlu Danışman */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))',
               gap: '12px',
             }}
           >
@@ -624,6 +705,17 @@ export function PropertiesPage({
               }
               error={errors.owner_tc_identity_no}
             />
+            <div style={{ gridColumn: '1 / -1' }}>
+              <Select
+                label="Sorumlu Gayrimenkul Danışmanı"
+                value={advisorName}
+                onChange={setAdvisorName}
+                options={advisors.map((a) => ({
+                  value: a.full_name,
+                  label: `${a.full_name} (${a.title})`,
+                }))}
+              />
+            </div>
           </div>
 
           <Input
@@ -634,10 +726,11 @@ export function PropertiesPage({
             placeholder="Örn: Çankaya Ayrancı'da Metroya Yakın 3+1 Satılık Daire"
           />
 
+          {/* 2. Temel İşlem & Fiyat & Oda */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))',
               gap: '10px',
             }}
           >
@@ -677,10 +770,11 @@ export function PropertiesPage({
             />
           </div>
 
+          {/* 3. Metrekare, Kat, Bina Yaşı ve Banyo Sayısı */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 90px), 1fr))',
               gap: '10px',
             }}
           >
@@ -714,12 +808,76 @@ export function PropertiesPage({
               }
               error={errors.building_floors}
             />
+            <Input
+              label="Bina Yaşı"
+              value={buildingAge}
+              onChange={(e) =>
+                setBuildingAge(formatDigitsOnly(e.target.value, 2))
+              }
+            />
+            <Input
+              label="Banyo Sayısı"
+              value={bathroomCount}
+              onChange={(e) =>
+                setBathroomCount(formatDigitsOnly(e.target.value, 1))
+              }
+            />
           </div>
 
+          {/* 4. Kredi, Eşya, Tapu, Kullanım Durumu */}
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))',
+              gap: '10px',
+            }}
+          >
+            <Select
+              label="Krediye Uygunluk"
+              value={isCreditEligible}
+              onChange={setIsCreditEligible}
+              options={[
+                { value: 'true', label: 'Krediye Uygun' },
+                { value: 'false', label: 'Uygun Değil' },
+              ]}
+            />
+            <Select
+              label="Eşya Durumu"
+              value={isFurnished}
+              onChange={setIsFurnished}
+              options={[
+                { value: 'false', label: 'Eşyalı Değil (Boş)' },
+                { value: 'true', label: 'Eşyalı (Mobilyalı)' },
+              ]}
+            />
+            <Select
+              label="Tapu Durumu"
+              value={deedStatus}
+              onChange={setDeedStatus}
+              options={[
+                { value: 'Kat Mülkiyetli', label: 'Kat Mülkiyetli' },
+                { value: 'Kat İrtifaklı', label: 'Kat İrtifaklı' },
+                { value: 'Müstakil Tapulu', label: 'Müstakil Tapulu' },
+                { value: 'Hisseli Tapu', label: 'Hisseli Tapu' },
+              ]}
+            />
+            <Select
+              label="Kullanım Durumu"
+              value={usageStatus}
+              onChange={setUsageStatus}
+              options={[
+                { value: 'Boş / Hemen Teslim', label: 'Boş / Hemen Teslim' },
+                { value: 'Kiracılı', label: 'Kiracılı' },
+                { value: 'Mülk Sahibi Oturuyor', label: 'Mülk Sahibi Oturuyor' },
+              ]}
+            />
+          </div>
+
+          {/* 5. Isınma & Konum */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 120px), 1fr))',
               gap: '10px',
             }}
           >
@@ -769,35 +927,222 @@ export function PropertiesPage({
             />
           </div>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '12px',
-            }}
-          >
-            <Input
-              label="Açık Adres"
-              value={addressDetail}
-              onChange={(e) => setAddressDetail(e.target.value)}
-              error={errors.address_detail}
-            />
-            <Input
-              label="Kapak Görseli URL (Opsiyonel)"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/..."
-            />
+          {/* 6. İç ve Dış Özellikler Çoklu Seçim (Madde 8: İlan verirken seçilebilir) */}
+          <div>
+            <div
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 700,
+                color: 'var(--color-text-body)',
+                marginBottom: '8px',
+              }}
+            >
+              İç ve Dış Özellikler ({selectedFeatures.length} Seçili)
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(195px, 1fr))',
+                gap: '8px',
+              }}
+            >
+              {ALL_SELECTABLE_FEATURES.map((feat) => {
+                const checked = selectedFeatures.includes(feat);
+                return (
+                  <button
+                    key={feat}
+                    type="button"
+                    onClick={() => toggleFeature(feat)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 11px',
+                      borderRadius: '10px',
+                      border: checked
+                        ? '1.5px solid var(--color-primary)'
+                        : '1px solid var(--color-border-default)',
+                      backgroundColor: checked
+                        ? 'var(--color-primary-soft)'
+                        : 'var(--color-bg-surface)',
+                      color: checked
+                        ? 'var(--color-primary)'
+                        : 'var(--color-text-body)',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                  >
+                    {checked ? (
+                      <CheckSquare size={15} />
+                    ) : (
+                      <Square size={15} />
+                    )}
+                    <span>{feat}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
+          {/* 7. Adres, Açıklama ve Cihazdan Görsel Yükleme */}
           <Input
-            label="İlan Açıklaması"
+            label="Açık Adres"
+            value={addressDetail}
+            onChange={(e) => setAddressDetail(e.target.value)}
+            error={errors.address_detail}
+          />
+
+          <Input
+            label="İlan Açıklaması (GİB AI Akıllı Özet tarafından da analiz edilir)"
             multiline
             rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             error={errors.agent_description}
           />
+
+          <div
+            style={{
+              padding: '14px',
+              borderRadius: '12px',
+              border: '1px solid var(--color-border-default)',
+              backgroundColor: 'var(--color-bg-surface-alt)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '10px',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '10px',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '13.5px' }}>
+                  İlan Fotoğrafları (Kapak ve Galeri)
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                  Cihazınızın galerisinden bir veya birden fazla fotoğraf seçebilirsiniz.
+                </div>
+              </div>
+              <label
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '8px 14px',
+                  borderRadius: 'var(--radius-pill)',
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#ffffff',
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                <Plus size={14} />
+                <span>Galeriden Fotoğraf Seç</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={async (e) => {
+                    const files = Array.from(e.target.files ?? []);
+                    if (files.length === 0) return;
+                    const uploadedUrls: string[] = [];
+                    for (const file of files) {
+                      try {
+                        const res = await uploadPropertyImageFile(file);
+                        uploadedUrls.push(res.url);
+                      } catch {
+                        // skip failed file
+                      }
+                    }
+                    if (uploadedUrls.length > 0) {
+                      if (!imageUrl.trim()) {
+                        setImageUrl(uploadedUrls[0]);
+                        const rest = uploadedUrls.slice(1);
+                        if (rest.length > 0) {
+                          setExtraImagesText((prev) =>
+                            [prev.trim(), ...rest].filter(Boolean).join('\n'),
+                          );
+                        }
+                      } else {
+                        setExtraImagesText((prev) =>
+                          [prev.trim(), ...uploadedUrls].filter(Boolean).join('\n'),
+                        );
+                      }
+                      onNotify(`${uploadedUrls.length} fotoğraf başarıyla yüklendi.`);
+                    }
+                    e.target.value = '';
+                  }}
+                />
+              </label>
+            </div>
+
+            {(imageUrl.trim() || extraImagesText.trim()) && (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[imageUrl.trim(), ...extraImagesText.split('\n').map((s) => s.trim())]
+                  .filter(Boolean)
+                  .map((url, idx) => (
+                    <div
+                      key={`${url}-${idx}`}
+                      style={{
+                        position: 'relative',
+                        width: '76px',
+                        height: '58px',
+                        borderRadius: '8px',
+                        overflow: 'hidden',
+                        border:
+                          idx === 0
+                            ? '2px solid var(--color-primary)'
+                            : '1px solid var(--color-border-default)',
+                      }}
+                    >
+                      <img
+                        src={url}
+                        alt={`Foto ${idx + 1}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const all = [
+                            imageUrl.trim(),
+                            ...extraImagesText.split('\n').map((s) => s.trim()),
+                          ].filter(Boolean);
+                          all.splice(idx, 1);
+                          setImageUrl(all[0] ?? '');
+                          setExtraImagesText(all.slice(1).join('\n'));
+                        }}
+                        style={{
+                          position: 'absolute',
+                          top: '2px',
+                          right: '2px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          border: 'none',
+                          background: 'rgba(0,0,0,0.65)',
+                          color: '#fff',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                        }}
+                        title="Görseli Kaldır"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
     </PageContainer>

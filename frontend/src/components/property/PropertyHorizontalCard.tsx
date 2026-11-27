@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   BedDouble,
   Building2,
-  Calendar,
   Heart,
   Layers,
   MapPin,
   Maximize2,
-  MessageCircle,
-  Phone,
 } from 'lucide-react';
 import type { PropertyRecord } from '../../types';
 import { getPropertyAdvisor } from '../../lib/advisors';
@@ -22,7 +19,7 @@ import {
   formatListingTypeLabel,
   formatPropertyTypeLabel,
 } from '../../utils/formatters';
-import { Avatar, Button } from '../core';
+import { Avatar } from '../core';
 import '../../css/property/PropertyCards.css';
 
 export interface PropertyCardProps {
@@ -32,13 +29,12 @@ export interface PropertyCardProps {
   onSelect: (property: PropertyRecord) => void;
   onToggleFavorite: (propertyId: number) => void;
   onSelectAgency?: (agencyId: number, advisorId?: number) => void;
-  onRequestAppointment?: (property: PropertyRecord) => void;
 }
 
 /**
- * Hepsiemlak Screenshot #2 imza yatay ilan kartı.
- * Fotoğraf üstü favori kalbi, tam okunaklı başlık, ikonlu özellik şeridi,
- * alt kısımda Emlak Ofisi logosu ve "Telefonu Göster" / "Randevu Al" aksiyonları içerir.
+ * Sadeleştirilmiş Yatay İlan Kartı (Madde 7):
+ * Gereksiz "Telefonu Göster", "Randevu Al" ve yeşil "İncele" butonları kaldırıldı.
+ * Kartın kendisine tıklanınca doğrudan ilan detay sayfasına gider.
  */
 export function PropertyHorizontalCard({
   property,
@@ -47,19 +43,23 @@ export function PropertyHorizontalCard({
   onSelect,
   onToggleFavorite,
   onSelectAgency,
-  onRequestAppointment,
 }: PropertyCardProps) {
-  const [showPhone, setShowPhone] = useState(false);
   const gallery = getPropertyGallery(property);
   const advisor = getPropertyAdvisor(property);
   const agencyName =
     property.agency?.name ?? 'Başkent Vizyon Gayrimenkul A.Ş.';
-  const phoneDisplay =
-    property.agency?.phone || advisor.phone || '0 (312) 468 10 20';
+  const age =
+    property.building_age !== undefined
+      ? property.building_age
+      : (property.id % 8) + 1;
 
   return (
-    <article className="prop-h-card">
-      <div className="prop-h-media" onClick={() => onSelect(property)}>
+    <article
+      className="prop-h-card"
+      style={{ cursor: 'pointer' }}
+      onClick={() => onSelect(property)}
+    >
+      <div className="prop-h-media">
         <img
           src={gallery[0]}
           alt={property.title}
@@ -88,8 +88,6 @@ export function PropertyHorizontalCard({
             />
           </button>
         )}
-
-        <span className="prop-photo-count-pill">1/{gallery.length} Fotoğraf</span>
       </div>
 
       <div className="prop-h-body">
@@ -101,9 +99,7 @@ export function PropertyHorizontalCard({
             </span>
           </div>
 
-          <h3 className="prop-h-title" onClick={() => onSelect(property)}>
-            {property.title}
-          </h3>
+          <h3 className="prop-h-title">{property.title}</h3>
 
           <div className="prop-h-specs">
             <span className="prop-h-spec-item" style={{ fontWeight: 600 }}>
@@ -122,7 +118,7 @@ export function PropertyHorizontalCard({
               <>
                 <span className="prop-h-spec-item">
                   <Building2 size={14} />
-                  <span>{(property.id % 8) + 1} Yaşında</span>
+                  <span>{age === 0 ? 'Sıfır Bina' : `${age} Yaşında`}</span>
                 </span>
                 <span className="prop-h-spec-item">
                   <Layers size={14} />
@@ -144,9 +140,10 @@ export function PropertyHorizontalCard({
           <button
             type="button"
             className="prop-h-agency-btn"
-            onClick={() =>
-              onSelectAgency?.(property.agency_id || 1, advisor.id)
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectAgency?.(property.agency_id || 1, advisor.id);
+            }}
           >
             <Avatar
               src={property.agency?.logo_url}
@@ -162,39 +159,15 @@ export function PropertyHorizontalCard({
             </div>
           </button>
 
-          <div className="prop-h-actions">
-            <Button
-              variant="primary"
-              size="sm"
-              pill
-              leftIcon={<Phone size={13} />}
-              onClick={() => setShowPhone((v) => !v)}
-            >
-              {showPhone ? phoneDisplay : 'Telefonu Göster'}
-            </Button>
-
-            {!hideCustomerActions && onRequestAppointment && (
-              <Button
-                variant="outline"
-                size="sm"
-                pill
-                leftIcon={<Calendar size={13} />}
-                onClick={() => onRequestAppointment(property)}
-              >
-                Randevu Al
-              </Button>
-            )}
-
-            <Button
-              variant="whatsapp"
-              size="sm"
-              pill
-              leftIcon={<MessageCircle size={13} />}
-              onClick={() => onSelect(property)}
-            >
-              İncele
-            </Button>
-          </div>
+          <span
+            style={{
+              fontSize: '12px',
+              fontWeight: 600,
+              color: 'var(--color-text-muted)',
+            }}
+          >
+            İlan No: #{150000 + property.id}
+          </span>
         </div>
       </div>
     </article>

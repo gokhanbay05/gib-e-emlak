@@ -8,3 +8,4 @@ export * from './Tabs';
 export * from './Avatar';
 export * from './Breadcrumb';
 export * from './SpecGrid';
+export * from './Skeleton';

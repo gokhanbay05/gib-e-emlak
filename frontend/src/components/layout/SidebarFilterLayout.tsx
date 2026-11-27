@@ -1,6 +1,8 @@
 import React from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { SlidersHorizontal, X } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import Modal from '../core/Modal';
+import { Button } from '../core';
 import '../../css/layout/SidebarFilterLayout.css';
 
 export interface SidebarFilterLayoutProps {
@@ -13,8 +15,8 @@ export interface SidebarFilterLayoutProps {
 }
 
 /**
- * Hepsiemlak Screenshot #2 & #4 tarzı Sol Sabit Filtre Sütunu + Sağ Liste/Harita Yerleşimi.
- * Masaüstünde sol sütun her zaman görünürdür; mobilde ise Modal olarak açılır.
+ * Masaüstünde Sol Sabit Filtre Sütunu; mobilde ise ekranın SAĞINDAN kayarak açılan
+ * tek tip Sağ Filtre Çekmecesi (Right Slide-Over Drawer).
  */
 export function SidebarFilterLayout({
   filterContent,
@@ -42,19 +44,51 @@ export function SidebarFilterLayout({
         <section className="sidebar-main-column">{children}</section>
       </div>
 
-      {onCloseMobileFilter && (
-        <Modal
-          isOpen={mobileFilterOpen}
-          onClose={onCloseMobileFilter}
-          title="İlanları Filtrele"
-          size="sm"
-          footer={filterFooter}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            {filterContent}
-          </div>
-        </Modal>
-      )}
+      <AnimatePresence>
+        {onCloseMobileFilter && mobileFilterOpen && (
+          <>
+            <motion.div
+              key="filter-drawer-backdrop"
+              className="filter-right-drawer-backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={onCloseMobileFilter}
+            />
+            <motion.aside
+              key="filter-drawer-panel"
+              className="filter-right-drawer-panel"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              aria-label="İlanları Filtrele"
+            >
+              <div className="filter-right-drawer-header">
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                  <SlidersHorizontal size={16} color="var(--color-primary)" />
+                  <span>İlanları Filtrele</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onCloseMobileFilter}
+                  aria-label="Filtreleri Kapat"
+                >
+                  <X size={18} />
+                </Button>
+              </div>
+
+              <div className="filter-right-drawer-body">{filterContent}</div>
+
+              {filterFooter && (
+                <div className="filter-right-drawer-footer">{filterFooter}</div>
+              )}
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </>
   );
 }

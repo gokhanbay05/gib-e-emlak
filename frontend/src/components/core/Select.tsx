@@ -9,13 +9,17 @@ export interface SelectOption {
 }
 
 export interface SelectProps
-  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size' | 'onChange'> {
+  extends Omit<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    'size' | 'onChange'
+  > {
   label?: string;
   options: SelectOption[];
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
   pill?: boolean;
+  inline?: boolean;
   selectSize?: 'sm' | 'md';
   error?: string;
 }
@@ -27,13 +31,16 @@ export function Select({
   onChange,
   placeholder,
   pill = false,
+  inline,
   selectSize = 'md',
   error,
   className,
   ...props
 }: SelectProps) {
+  const isInline = inline ?? (!label && selectSize === 'sm');
+
   return (
-    <div className="select-container">
+    <div className={cn('select-container', isInline && 'select-inline')}>
       {label && <label className="select-label">{label}</label>}
       <div className="select-wrapper">
         <select

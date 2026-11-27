@@ -1,16 +1,27 @@
 import re
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import func, select
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.validators import (
     DIGIT_RE,
     EMAIL_RE,
+    hash_password,
     normalize_and_validate_phone,
+    validate_password_strength,
     validate_tc_identity_no,
 )
-from app.models import Agency, Appointment, Customer, Property
+from app.models import (
+    Agency,
+    AgencyReview,
+    Appointment,
+    ChatMessage,
+    ChatThread,
+    Customer,
+    Property,
+    User,
+)
 from app.schemas.agency import AgencySellRequestCreate, AgencyUpdateRequest
 
 VALID_SELL_LISTING_TYPES = {"SATILIK", "KIRALIK"}
@@ -58,6 +69,24 @@ def serialize_agency(agency: Agency, db: Session) -> dict:
         or 0
     )
 
+    review_count = (
+        db.scalar(
+            select(func.count())
+            .select_from(AgencyReview)
+            .where(AgencyReview.agency_id == agency.id)
+        )
+        or 0
+    )
+    review_avg_raw = db.scalar(
+        select(func.avg(AgencyReview.rating)).where(
+            AgencyReview.agency_id == agency.id
+        )
+    )
+    review_avg = round(float(review_avg_raw), 1) if review_avg_raw else 0.0
+
+    work_days_str = agency.working_days or "Pzt,Sal,Çar,Per,Cum,Cmt"
+    work_days = [d.strip() for d in work_days_str.split(",") if d.strip()]
+
     return {
         "id": agency.id,
         "name": agency.name,
@@ -75,6 +104,15 @@ def serialize_agency(agency: Agency, db: Session) -> dict:
         "is_ttbs_verified": agency.is_ttbs_verified,
         "logo_url": agency.logo_url or "",
         "description": agency.description or "",
+        "working_hours": {
+            "start_hour": agency.work_start_hour or 9,
+            "end_hour": agency.work_end_hour or 18,
+            "working_days": work_days,
+        },
+        "review_stats": {
+            "average": review_avg,
+            "count": int(review_count),
+        },
         "stats": {
             "property_count": property_count,
             "active_property_count": active_property_count,
@@ -230,8 +268,37 @@ def _serialize_sell_request(customer: Customer, agency: Agency) -> dict:
 
 @router.get("/{agency_id}/sell-requests")
 def list_agency_sell_requests(
-    agency_id: int, db: Session = Depends(get_db)
+    agency_id: int,
+    customer_id: int | None = Query(default=None),
+    db: Session = Depends(get_db),
 ) -> dict:
+    if agency_id == 0 and customer_id is not None:
+        base_cust = db.get(Customer, customer_id)
+        if base_cust is None:
+            return {"sell_requests": []}
+        match_filters = [Customer.id == base_cust.id]
+        if base_cust.tc_identity_no:
+            match_filters.append(Customer.tc_identity_no == base_cust.tc_identity_no)
+        if base_cust.mobile_phone:
+            match_filters.append(Customer.mobile_phone == base_cust.mobile_phone)
+        if base_cust.email:
+            match_filters.append(Customer.email == base_cust.email)
+        customers = db.scalars(
+            select(Customer)
+            .where(
+                Customer.customer_type.in_(["SATICI", "KIRALAYAN"]),
+                or_(*match_filters),
+            )
+            .order_by(Customer.created_at.desc(), Customer.id.desc())
+        ).all()
+        agencies_map = {a.id: a for a in db.scalars(select(Agency)).all()}
+        return {
+            "sell_requests": [
+                _serialize_sell_request(c, agencies_map.get(c.agency_id) or Agency(id=c.agency_id or 1, name="Emlak Ofisi", authorized_person="", phone="", mobile_phone="", address="", city="", district="", neighborhood="", tax_office="", tax_number="", ttbs_document_no=""))
+                for c in customers
+            ]
+        }
+
     agency = db.get(Agency, agency_id)
     if agency is None:
         raise HTTPException(
@@ -296,7 +363,11 @@ def create_agency_sell_request(
 
     cleaned_tc: str | None = None
     is_tc_verified = False
-    if payload.tc_identity_no and payload.tc_identity_no.strip():
+    if not payload.tc_identity_no or not payload.tc_identity_no.strip():
+        field_errors["tc_identity_no"] = (
+            "BR-04: Mülk satış / kiralama başvurusu için 11 haneli T.C. Kimlik Numarası zorunludur."
+        )
+    else:
         tc_ok, normalized_tc, tc_err = validate_tc_identity_no(payload.tc_identity_no)
         if not tc_ok:
             field_errors["tc_identity_no"] = tc_err
@@ -371,6 +442,32 @@ def create_agency_sell_request(
         notes=notes,
     )
     db.add(customer)
+    db.flush()
+
+    # Satıcı / Mülk Sahibi emlak ofisi yetkilisine her zaman doğrudan yazabilsin (Sohbet Odası aç)
+    seller_thread = ChatThread(
+        agency_id=agency.id,
+        customer_id=customer.id,
+        advisor_name=agency.authorized_person,
+        thread_type="SELL_INQUIRY",
+        subject=f"{listing_type} {property_type} Satış Başvurusu ({district}/{city})",
+    )
+    db.add(seller_thread)
+    db.flush()
+
+    db.add(
+        ChatMessage(
+            thread_id=seller_thread.id,
+            sender_role="AGENT",
+            sender_name=agency.authorized_person,
+            content=(
+                f"Merhaba {first_name} {last_name}, {district}/{city} bölgesindeki "
+                f"{room_count} ({payload.gross_sqm} m²) taşınmaz başvurunuz ekibimize ulaştı. "
+                f"Ekspertiz ve süreç hakkında buradan doğrudan bize yazabilirsiniz."
+            ),
+        )
+    )
+
     db.commit()
     db.refresh(customer)
 
@@ -393,5 +490,103 @@ def create_agency_sell_request(
             "neighborhood": neighborhood,
             "notes": customer.notes or "",
             "created_at": customer.created_at.isoformat() if customer.created_at else "",
+        },
+    }
+
+
+@router.post("/{agency_id}/advisors", status_code=status.HTTP_201_CREATED)
+def create_agency_advisor_account(
+    agency_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+) -> dict:
+    agency = db.get(Agency, agency_id)
+    if agency is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Emlak işletmesi bulunamadı.",
+        )
+
+    full_name = str(payload.get("full_name") or "").strip()
+    phone = str(payload.get("phone") or "").strip()
+    email = str(payload.get("email") or "").strip().lower()
+    password = str(payload.get("password") or "")
+
+    if len(full_name) < 3:
+        raise HTTPException(status_code=400, detail="Ad soyad en az 3 karakter olmalıdır.")
+    if not EMAIL_RE.match(email):
+        raise HTTPException(status_code=400, detail="Geçerli bir e-posta adresi giriniz.")
+    pwd_ok, pwd_err = validate_password_strength(password)
+    if not pwd_ok:
+        raise HTTPException(status_code=400, detail=pwd_err)
+
+    existing_user = db.scalar(select(User).where(User.email == email))
+    if existing_user is not None:
+        raise HTTPException(status_code=409, detail="Bu e-posta adresi zaten sistemde kayıtlı.")
+
+    new_user = User(
+        full_name=full_name,
+        email=email,
+        phone=phone or agency.phone,
+        password_hash=hash_password(password),
+        role="AGENT",
+        agency_id=agency_id,
+    )
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return {
+        "message": "Danışman hesabı oluşturuldu. E-posta ve şifresiyle sisteme giriş yapabilir.",
+        "user": {
+            "id": new_user.id,
+            "full_name": new_user.full_name,
+            "email": new_user.email,
+            "phone": new_user.phone,
+            "agency_id": new_user.agency_id,
+        },
+    }
+
+
+@router.put("/{agency_id}/working-hours")
+def update_agency_working_hours(
+    agency_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+) -> dict:
+    """Emlak ofisinin mesai saatlerini ve çalışma günlerini günceller."""
+    agency = db.get(Agency, agency_id)
+    if agency is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Emlak işletmesi bulunamadı.",
+        )
+
+    start_hour = int(payload.get("start_hour", 9))
+    end_hour = int(payload.get("end_hour", 18))
+    if end_hour <= start_hour:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mesai bitiş saati başlangıç saatinden büyük olmalıdır.",
+        )
+
+    raw_days = payload.get("working_days") or []
+    if isinstance(raw_days, list) and len(raw_days) > 0:
+        days_csv = ",".join(str(d).strip() for d in raw_days if str(d).strip())
+    else:
+        days_csv = "Pzt,Sal,Çar,Per,Cum"
+
+    agency.work_start_hour = start_hour
+    agency.work_end_hour = end_hour
+    agency.working_days = days_csv
+    db.commit()
+    db.refresh(agency)
+
+    return {
+        "message": f"Mesai saatleri ({start_hour:02d}:00 - {end_hour:02d}:00) ve çalışma günleri güncellendi.",
+        "working_hours": {
+            "start_hour": agency.work_start_hour,
+            "end_hour": agency.work_end_hour,
+            "working_days": [d.strip() for d in days_csv.split(",") if d.strip()],
         },
     }

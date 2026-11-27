@@ -64,12 +64,13 @@
 /* Screenshot #8 Aşağı Kaydırınca Sabitlenen (Sticky) Üst Bar */
 .detail-sticky-scroll-bar {
   position: fixed;
-  top: var(--navbar-height);
+  top: calc(var(--navbar-height) - 1px);
   left: 0;
   right: 0;
   z-index: 900;
   background-color: var(--color-bg-surface);
-  border-bottom: 1px solid var(--color-border-default);
+  border-top: 1px solid var(--color-border-default);
+  border-bottom: 1.5px solid var(--color-border-default);
   box-shadow: var(--shadow-md);
   padding: 10px 24px;
   animation: modal-fade-in 0.15s ease-out;
@@ -82,7 +83,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
 }
 
 /* Sağ Sabit Emlak Ofisi & Danışman Kartı (Screenshot #6) */
@@ -160,4 +161,60 @@
   height: 64px;
   border-radius: var(--radius-sm);
   object-fit: cover;
+}
+
+.detail-mobile-contact-row {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .detail-sticky-scroll-bar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 960px) {
+  .sticky-tabs-inline {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .detail-breadcrumb-hide-mobile {
+    display: none;
+  }
+  .detail-main-heading {
+    font-size: 18px;
+  }
+  .detail-main-price {
+    font-size: 20px;
+  }
+  .detail-quick-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .detail-quick-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    width: 100%;
+  }
+  .detail-quick-actions button {
+    width: 100%;
+    padding-left: 6px;
+    padding-right: 6px;
+    font-size: 11.5px;
+  }
+  .detail-mobile-contact-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+  .detail-sticky-scroll-bar {
+    padding: 8px 12px;
+  }
+  .detail-sticky-scroll-inner {
+    gap: 8px;
+  }
 }

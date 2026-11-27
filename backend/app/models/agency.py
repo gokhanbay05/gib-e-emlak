@@ -30,6 +30,11 @@ class Agency(Base):
     )
     logo_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    work_start_hour: Mapped[int] = mapped_column(Integer, default=9, nullable=False)
+    work_end_hour: Mapped[int] = mapped_column(Integer, default=18, nullable=False)
+    working_days: Mapped[str] = mapped_column(
+        String(80), default="Pzt,Sal,Çar,Per,Cum,Cmt", nullable=False
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base, utc_now
@@ -20,6 +20,9 @@ class Appointment(Base):
     customer_id: Mapped[int] = mapped_column(
         ForeignKey("customers.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    advisor_name: Mapped[str | None] = mapped_column(
+        String(120), default="Selim Karahan", nullable=True, index=True
+    )
     appointment_type: Mapped[str] = mapped_column(String(24), nullable=False)
     purpose: Mapped[str] = mapped_column(
         String(40), default="ILAN_GOSTERIMI", nullable=False
@@ -34,6 +37,17 @@ class Appointment(Base):
         String(24), default="AKTIF", nullable=False, index=True
     )
     meeting_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    rating_dismissed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    rating_submitted: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    cancelled_by: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    cancel_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cancel_ack_dismissed: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     cancelled_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
@@ -54,6 +68,9 @@ class BlockedSlot(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     agency_id: Mapped[int] = mapped_column(
         ForeignKey("agencies.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    advisor_name: Mapped[str | None] = mapped_column(
+        String(120), default="Selim Karahan", nullable=True, index=True
     )
     start_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, index=True

@@ -1,7 +1,14 @@
 import type { NavDestination } from '../types';
 
-export type ProfileTabKey = 'favorites' | 'appointments' | 'sell-requests' | 'security';
+export type ProfileTabKey =
+  | 'favorites'
+  | 'appointments'
+  | 'messages'
+  | 'sell-requests'
+  | 'security'
+  | 'office';
 export type AuthTabKey = 'login' | 'register-customer' | 'register-agent';
+export type ListingDisplayMode = 'grid' | 'horizontal' | 'map';
 
 export interface RouteState {
   page: NavDestination;
@@ -11,11 +18,17 @@ export interface RouteState {
   profileTab: ProfileTabKey;
   authTab: AuthTabKey;
   listingType: 'ALL' | 'SATILIK' | 'KIRALIK';
+  city: string;
+  district: string;
+  neighborhood: string;
+  searchQuery: string;
+  viewMode: ListingDisplayMode;
 }
 
 const VALID_PAGES: Set<NavDestination> = new Set([
   'marketplace',
   'property-detail',
+  'agencies-directory',
   'agency-storefront',
   'sell-request',
   'profile',
@@ -29,6 +42,20 @@ const VALID_PAGES: Set<NavDestination> = new Set([
   'reports',
   'system',
 ]);
+
+export const CORPORATE_ONLY_PAGES: Set<NavDestination> = new Set([
+  'properties',
+  'customers',
+  'calendar',
+  'agency',
+  'reports',
+  'search',
+  'ai-match',
+]);
+
+export function isCorporateOnlyPage(page: NavDestination): boolean {
+  return CORPORATE_ONLY_PAGES.has(page);
+}
 
 /**
  * Tarayıcı URL parametrelerinden (window.location.search) aktif rota durumunu okur.
@@ -54,7 +81,14 @@ export function parseRouteFromLocation(): RouteState {
   const rawProfileTab = params.get('tab') as ProfileTabKey | null;
   const profileTab: ProfileTabKey =
     rawProfileTab &&
-    ['favorites', 'appointments', 'sell-requests', 'security'].includes(rawProfileTab)
+    [
+      'favorites',
+      'appointments',
+      'messages',
+      'sell-requests',
+      'security',
+      'office',
+    ].includes(rawProfileTab)
       ? rawProfileTab
       : 'favorites';
 
@@ -69,6 +103,17 @@ export function parseRouteFromLocation(): RouteState {
   const listingType: 'ALL' | 'SATILIK' | 'KIRALIK' =
     rawTx === 'SATILIK' || rawTx === 'KIRALIK' ? rawTx : 'ALL';
 
+  const rawView = params.get('view') as ListingDisplayMode | null;
+  const viewMode: ListingDisplayMode =
+    rawView === 'horizontal' || rawView === 'map' || rawView === 'grid'
+      ? rawView
+      : 'grid';
+
+  const searchQuery = (params.get('q') || '').trim();
+  const city = (params.get('city') || '').trim();
+  const district = (params.get('district') || '').trim();
+  const neighborhood = (params.get('neighborhood') || '').trim();
+
   return {
     page,
     propertyId,
@@ -77,14 +122,21 @@ export function parseRouteFromLocation(): RouteState {
     profileTab,
     authTab,
     listingType,
+    city,
+    district,
+    neighborhood,
+    searchQuery,
+    viewMode,
   };
 }
 
 /**
  * Yeni rota durumunu tarayıcı geçmişine (window.history.pushState) yazar.
- * Böylece sayfa içi geri butonuna gerek kalmadan tarayıcının Geri/İleri tuşları kusursuz çalışır.
  */
-export function pushRouteToHistory(next: Partial<RouteState>, replace = false): RouteState {
+export function pushRouteToHistory(
+  next: Partial<RouteState>,
+  replace = false,
+): RouteState {
   const current = parseRouteFromLocation();
   const merged: RouteState = {
     ...current,
@@ -97,6 +149,21 @@ export function pushRouteToHistory(next: Partial<RouteState>, replace = false): 
   }
   if (merged.page === 'marketplace' && merged.listingType !== 'ALL') {
     params.set('tx', merged.listingType);
+  }
+  if (merged.page === 'marketplace' && merged.searchQuery) {
+    params.set('q', merged.searchQuery);
+  }
+  if (merged.page === 'marketplace' && merged.city) {
+    params.set('city', merged.city);
+  }
+  if (merged.page === 'marketplace' && merged.district) {
+    params.set('district', merged.district);
+  }
+  if (merged.page === 'marketplace' && merged.neighborhood) {
+    params.set('neighborhood', merged.neighborhood);
+  }
+  if (merged.page === 'marketplace' && merged.viewMode !== 'grid') {
+    params.set('view', merged.viewMode);
   }
   if (merged.page === 'property-detail' && merged.propertyId) {
     params.set('id', String(merged.propertyId));
@@ -115,7 +182,9 @@ export function pushRouteToHistory(next: Partial<RouteState>, replace = false): 
   }
 
   const qs = params.toString();
-  const nextUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+  const nextUrl = qs
+    ? `${window.location.pathname}?${qs}`
+    : window.location.pathname;
 
   if (replace) {
     window.history.replaceState(merged, '', nextUrl);

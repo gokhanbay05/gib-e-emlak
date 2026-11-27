@@ -39,6 +39,23 @@ class Property(Base):
         Boolean, default=True, nullable=False
     )
     image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    building_age: Mapped[int | None] = mapped_column(Integer, default=3, nullable=True)
+    bathroom_count: Mapped[int | None] = mapped_column(Integer, default=1, nullable=True)
+    is_credit_eligible: Mapped[bool | None] = mapped_column(
+        Boolean, default=True, nullable=True
+    )
+    is_furnished: Mapped[bool | None] = mapped_column(
+        Boolean, default=False, nullable=True
+    )
+    deed_status: Mapped[str | None] = mapped_column(
+        String(80), default="Kat Mülkiyetli", nullable=True
+    )
+    usage_status: Mapped[str | None] = mapped_column(
+        String(80), default="Boş / Hemen Teslim", nullable=True
+    )
+    features_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    images_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    advisor_name: Mapped[str | None] = mapped_column(String(120), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )

@@ -6,7 +6,6 @@ import {
   MapPin,
   Maximize2,
 } from 'lucide-react';
-import type { PropertyRecord } from '../../types';
 import { getPropertyAdvisor } from '../../lib/advisors';
 import {
   cn,
@@ -14,6 +13,7 @@ import {
   getPropertyGallery,
 } from '../../lib/utils';
 import {
+  formatDateTR,
   formatListingTypeLabel,
   formatPropertyTypeLabel,
 } from '../../utils/formatters';
@@ -35,8 +35,12 @@ export function PropertyGridCard({
     property.agency?.name ?? 'Başkent Vizyon Gayrimenkul A.Ş.';
 
   return (
-    <article className="prop-grid-card">
-      <div className="prop-grid-media" onClick={() => onSelect(property)}>
+    <article
+      className="prop-grid-card"
+      style={{ cursor: 'pointer' }}
+      onClick={() => onSelect(property)}
+    >
+      <div className="prop-grid-media">
         <img
           src={gallery[0]}
           alt={property.title}
@@ -73,16 +77,25 @@ export function PropertyGridCard({
 
       <div className="prop-grid-body">
         <div
-          className="prop-h-price"
-          style={{ fontSize: '19px', color: 'var(--color-primary)' }}
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            justifyContent: 'space-between',
+            gap: '8px',
+          }}
         >
-          {formatPriceTL(property.price)}
+          <div
+            className="prop-h-price"
+            style={{ fontSize: '19px', color: 'var(--color-primary)' }}
+          >
+            {formatPriceTL(property.price)}
+          </div>
+          <span className="prop-h-date">{formatDateTR(property.created_at)}</span>
         </div>
 
         <h3
           className="prop-h-title"
           style={{ fontSize: '14.5px', margin: 0 }}
-          onClick={() => onSelect(property)}
         >
           {property.title}
         </h3>
@@ -118,9 +131,10 @@ export function PropertyGridCard({
           <button
             type="button"
             className="prop-h-agency-btn"
-            onClick={() =>
-              onSelectAgency?.(property.agency_id || 1, advisor.id)
-            }
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelectAgency?.(property.agency_id || 1, advisor.id);
+            }}
           >
             <Avatar
               src={property.agency?.logo_url}

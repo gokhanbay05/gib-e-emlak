@@ -39,3 +39,6 @@ class ProfileUpdateRequest(BaseModel):
     new_password: str | None = Field(
         default=None, description="Opsiyonel yeni şifre"
     )
+    avatar_url: str | None = Field(
+        default=None, description="Profil fotoğrafı URL"
+    )

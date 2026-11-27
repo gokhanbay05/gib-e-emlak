@@ -99,4 +99,11 @@
   .emlak-index-compare-box {
     grid-template-columns: 1fr;
   }
+  .emlak-chart-card {
+    padding: 14px 12px;
+    overflow-x: auto;
+  }
+  .emlak-chart-card svg {
+    min-width: 520px;
+  }
 }

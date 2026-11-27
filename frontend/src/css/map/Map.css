@@ -1,36 +1,14 @@
-.slippy-map-wrapper {
+.geosocial-map-container {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 580px;
+  min-height: 540px;
   overflow: hidden;
-  background-color: #dbeafe;
-  user-select: none;
-  cursor: grab;
+  border-radius: 0;
 }
 
-.slippy-map-wrapper:active {
-  cursor: grabbing;
-}
-
-.slippy-tile-layer {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.slippy-tile-img {
-  position: absolute;
-  width: 256px;
-  height: 256px;
-  user-select: none;
-  pointer-events: none;
-}
-
-/* Hepsiemlak Screenshot #4 Kırmızı Çerçeveli Yuvarlak Cluster Balonu */
+/* GeoSocial + Hepsiemlak Kırmızı Çerçeveli Yuvarlak Cluster Balonu */
 .hepsi-cluster-marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -39,24 +17,21 @@
   border: 2.5px solid var(--color-primary);
   color: var(--color-primary);
   font-weight: 800;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
   cursor: pointer;
-  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease;
-  z-index: 10;
+  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.16s ease;
 }
 
 .hepsi-cluster-marker:hover {
-  transform: translate(-50%, -50%) scale(1.12);
+  transform: scale(1.12);
   background-color: var(--color-primary);
   color: #ffffff;
-  z-index: 30;
 }
 
 /* Tekil İlan Fiyat Pini */
 .hepsi-price-pin {
-  position: absolute;
-  transform: translate(-50%, -100%);
-  padding: 6px 11px;
+  position: relative;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
   background-color: var(--color-bg-surface);
   border: 2px solid var(--color-primary);
@@ -64,19 +39,18 @@
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.22);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
   cursor: pointer;
   transition: all 0.15s ease;
-  z-index: 15;
 }
 
 .hepsi-price-pin::after {
   content: '';
   position: absolute;
-  bottom: -6px;
+  bottom: -7px;
   left: 50%;
   transform: translateX(-50%);
-  border-width: 6px 5px 0;
+  border-width: 7px 5px 0;
   border-style: solid;
   border-color: var(--color-primary) transparent transparent;
 }
@@ -85,48 +59,15 @@
 .hepsi-price-pin.is-active {
   background-color: var(--color-primary);
   color: #ffffff;
-  transform: translate(-50%, -100%) scale(1.08);
-  z-index: 35;
+  transform: scale(1.08);
 }
 
-/* Sağ Üst Zoom & Sıfırlama Kontrolleri */
-.slippy-map-controls {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 40;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.slippy-ctrl-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--color-border-default);
-  background-color: var(--color-bg-surface);
-  color: var(--color-text-dark);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: var(--shadow-sm);
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.slippy-ctrl-btn:hover {
-  background-color: var(--color-bg-hover);
-  color: var(--color-primary);
-}
-
-/* Sol Üst Görünür Alan Sayacı */
+/* Sol Üst Görünür Bölge Bilgi Hapı */
 .slippy-bounds-pill {
   position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 40;
+  top: 14px;
+  left: 14px;
+  z-index: 20;
   padding: 8px 16px;
   border-radius: var(--radius-pill);
   background-color: var(--color-bg-surface);
@@ -140,18 +81,113 @@
   gap: 8px;
 }
 
+/* Sağ Üst Harita Görünüm Anahtarı (Sokak / Uydu) */
+.map-style-switcher {
+  position: absolute;
+  top: 10px;
+  right: 52px;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border-default);
+  box-shadow: var(--shadow-md);
+  gap: 2px;
+}
+
+.map-style-switch-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.map-style-switch-btn:hover {
+  color: var(--color-text-dark);
+}
+
+.map-style-switch-btn.is-active {
+  background-color: var(--color-primary);
+  color: #ffffff;
+}
+
 /* Harita Üzerinde Seçili İlan Önizleme Kartı */
 .slippy-preview-card {
   position: absolute;
   bottom: 20px;
   left: 20px;
-  z-index: 45;
-  width: 360px;
+  z-index: 30;
+  width: 350px;
   max-width: calc(100% - 40px);
   background-color: var(--color-bg-surface);
   border: 1px solid var(--color-border-default);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
   animation: modal-pop-in 0.16s ease-out;
+}
+
+.slippy-preview-card:hover {
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.22);
+}
+
+/* Mobilde harita alt kontrol hapı (masaüstünde gizli; detay sayfasında da görünür) */
+.map-mobile-bottom-bar {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .geosocial-map-container {
+    min-height: 320px;
+  }
+  .sidebar-filter-layout.is-map-mode .geosocial-map-container {
+    min-height: calc(100dvh - var(--navbar-height));
+  }
+  .slippy-bounds-pill {
+    top: 10px;
+    left: 10px;
+    right: 52px;
+    padding: 6px 10px;
+    font-size: 11.5px;
+    justify-content: space-between;
+  }
+  .map-style-switcher {
+    display: none;
+  }
+  .map-mobile-bottom-bar {
+    position: absolute;
+    bottom: 14px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 25;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bg-surface);
+    border: 1.5px solid var(--color-border-default);
+    box-shadow: var(--shadow-lg);
+    max-width: calc(100% - 20px);
+    white-space: nowrap;
+  }
+  .slippy-preview-card {
+    bottom: 66px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-width: none;
+  }
 }

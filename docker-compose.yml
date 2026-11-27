@@ -68,6 +68,7 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/index.html:/app/index.html
       - ./frontend/vite.config.ts:/app/vite.config.ts
+      - ./frontend/.env:/app/.env
 
 volumes:
   gib_postgres_data:

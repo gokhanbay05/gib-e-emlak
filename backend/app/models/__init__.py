@@ -4,12 +4,15 @@ from app.models.agency import Agency
 from app.models.appointment import Appointment, BlockedSlot
 from app.models.customer import Customer, CustomerSearchRequest
 from app.models.property import Property
-from app.models.user import Favorite, User
+from app.models.user import AgencyReview, ChatMessage, ChatThread, Favorite, User
 
 __all__ = [
     "Agency",
+    "AgencyReview",
     "Appointment",
     "BlockedSlot",
+    "ChatMessage",
+    "ChatThread",
     "Customer",
     "CustomerSearchRequest",
     "Favorite",

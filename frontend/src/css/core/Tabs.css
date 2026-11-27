@@ -91,3 +91,22 @@
   color: var(--color-primary);
   border-bottom-color: var(--color-primary);
 }
+
+@media (max-width: 768px) {
+  .tabs-list {
+    display: flex;
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .tabs-list::-webkit-scrollbar {
+    display: none;
+  }
+  .tabs-list .tab-trigger {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}

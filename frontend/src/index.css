@@ -1,27 +1,27 @@
 :root {
-  /* Hepsiemlak & Apple Calendar Light Theme Tokens */
-  --color-bg-page: #f5f6f8;
+  /* GİB e-Emlak Canlı Kırmızı & Ferah Modern Tema */
+  --color-bg-page: #f8fafc;
   --color-bg-surface: #ffffff;
   --color-bg-surface-alt: #f8fafc;
   --color-bg-muted: #f1f5f9;
   --color-bg-hover: #f1f5f9;
 
-  /* Primary Brand (Hepsiemlak Coral / Crimson) */
+  /* Primary Brand (Hepsiemlak Canlı Kırmızı / Rose) */
   --color-primary: #e11d48;
   --color-primary-hover: #be123c;
   --color-primary-soft: #fff1f2;
   --color-primary-border: #fecdd3;
 
-  /* Secondary Corporate Accent (Slate / Navy) */
-  --color-secondary: #0f172a;
-  --color-secondary-hover: #1e293b;
+  /* Secondary Corporate Accent */
+  --color-secondary: #1e293b;
+  --color-secondary-hover: #0f172a;
   --color-secondary-soft: #f1f5f9;
 
-  /* AI / Sparkle Accent (HepsiAI Purple-Blue-Coral) */
-  --color-ai-accent: #6366f1;
-  --color-ai-soft: #eef2ff;
-  --gradient-ai-border: linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%);
-  --gradient-ai-surface: linear-gradient(135deg, rgba(99, 102, 241, 0.06) 0%, rgba(236, 72, 153, 0.06) 100%);
+  /* AI / Sparkle Accent */
+  --color-ai-accent: #7c3aed;
+  --color-ai-soft: #f5f3ff;
+  --gradient-ai-border: linear-gradient(135deg, #e11d48 0%, #7c3aed 100%);
+  --gradient-ai-surface: linear-gradient(135deg, rgba(225, 29, 72, 0.05) 0%, rgba(124, 58, 237, 0.06) 100%);
 
   /* Semantic Status Colors */
   --color-verified: #2563eb;
@@ -32,15 +32,15 @@
   --color-whatsapp-border: #bbf7d0;
 
   --color-success-bg: #dcfce7;
-  --color-success-text: #15803d;
+  --color-success-text: #166534;
   --color-success-border: #bbf7d0;
 
   --color-warning-bg: #fef3c7;
-  --color-warning-text: #b45309;
+  --color-warning-text: #92400e;
   --color-warning-border: #fde68a;
 
   --color-danger-bg: #fee2e2;
-  --color-danger-text: #b91c1c;
+  --color-danger-text: #991b1b;
   --color-danger-border: #fecaca;
 
   /* Typography Colors */
@@ -50,17 +50,17 @@
   --color-text-subtle: #94a3b8;
   --color-text-light: #ffffff;
 
-  /* Borders & Shadows */
+  /* Borders & Soft Modern Shadows */
   --color-border-default: #e2e8f0;
   --color-border-subtle: #f1f5f9;
   --color-border-focus: #e11d48;
 
-  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.06);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 4px 12px -2px rgba(15, 23, 42, 0.07);
+  --shadow-md: 0 10px 25px -5px rgba(15, 23, 42, 0.1);
+  --shadow-lg: 0 20px 44px -8px rgba(15, 23, 42, 0.16);
 
-  /* Radii */
+  /* Modern Soft Radii */
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
@@ -72,57 +72,57 @@
 }
 
 .dark {
-  --color-bg-page: #0b0f17;
-  --color-bg-surface: #151c28;
-  --color-bg-surface-alt: #1c2536;
-  --color-bg-muted: #232e42;
-  --color-bg-hover: #263248;
+  --color-bg-page: #09090b;
+  --color-bg-surface: #111114;
+  --color-bg-surface-alt: #18181c;
+  --color-bg-muted: #202026;
+  --color-bg-hover: #27272e;
 
   --color-primary: #f43f5e;
   --color-primary-hover: #e11d48;
   --color-primary-soft: rgba(244, 63, 94, 0.15);
-  --color-primary-border: rgba(244, 63, 94, 0.35);
+  --color-primary-border: rgba(244, 63, 94, 0.38);
 
-  --color-secondary: #f8fafc;
-  --color-secondary-hover: #e2e8f0;
-  --color-secondary-soft: #1e293b;
+  --color-secondary: #94a3b8;
+  --color-secondary-hover: #cbd5e1;
+  --color-secondary-soft: rgba(148, 163, 184, 0.14);
 
-  --color-ai-accent: #818cf8;
-  --color-ai-soft: rgba(129, 140, 248, 0.14);
+  --color-ai-accent: #a78bfa;
+  --color-ai-soft: rgba(167, 139, 250, 0.14);
 
   --color-verified: #60a5fa;
-  --color-verified-soft: rgba(96, 165, 250, 0.15);
+  --color-verified-soft: rgba(96, 165, 250, 0.16);
 
-  --color-whatsapp: #4ade80;
-  --color-whatsapp-soft: rgba(74, 222, 128, 0.12);
-  --color-whatsapp-border: rgba(74, 222, 128, 0.3);
+  --color-whatsapp: #22c55e;
+  --color-whatsapp-soft: rgba(34, 197, 94, 0.14);
+  --color-whatsapp-border: rgba(34, 197, 94, 0.34);
 
-  --color-success-bg: rgba(22, 163, 74, 0.18);
+  --color-success-bg: rgba(34, 197, 94, 0.18);
   --color-success-text: #4ade80;
-  --color-success-border: rgba(74, 222, 128, 0.3);
+  --color-success-border: rgba(74, 222, 128, 0.34);
 
-  --color-warning-bg: rgba(217, 119, 6, 0.18);
+  --color-warning-bg: rgba(245, 158, 11, 0.16);
   --color-warning-text: #fbbf24;
   --color-warning-border: rgba(251, 191, 36, 0.3);
 
-  --color-danger-bg: rgba(220, 38, 38, 0.2);
-  --color-danger-text: #f87171;
-  --color-danger-border: rgba(248, 113, 113, 0.35);
+  --color-danger-bg: rgba(244, 63, 94, 0.2);
+  --color-danger-text: #fda4af;
+  --color-danger-border: rgba(253, 164, 175, 0.35);
 
-  --color-text-dark: #f8fafc;
-  --color-text-body: #cbd5e1;
-  --color-text-muted: #94a3b8;
-  --color-text-subtle: #64748b;
+  --color-text-dark: #fafafa;
+  --color-text-body: #d4d4d8;
+  --color-text-muted: #a1a1aa;
+  --color-text-subtle: #71717a;
   --color-text-light: #ffffff;
 
-  --color-border-default: #293548;
-  --color-border-subtle: #1e293b;
+  --color-border-default: #27272a;
+  --color-border-subtle: #1c1c21;
   --color-border-focus: #f43f5e;
 
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.35);
-  --shadow-md: 0 8px 26px rgba(0, 0, 0, 0.45);
-  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.65);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.55);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.7);
 }
 
 *,
@@ -137,9 +137,12 @@ body,
   margin: 0;
   padding: 0;
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: var(--color-bg-page);
   color: var(--color-text-dark);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
@@ -158,9 +161,10 @@ textarea {
   font-family: inherit;
 }
 
+/* Ekran İçinde Yarı Saydam İnce Scrollbar (Ayrı boşluk kaplamaz) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -168,12 +172,119 @@ textarea {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-border-default);
+  background-color: rgba(120, 113, 108, 0.32);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-text-muted);
+  background-color: rgba(120, 113, 108, 0.55);
+}
+
+/* Mobilde Scrollbar Görünürlüğünü Tamamen Kapat & iOS Input Zoom Engelle */
+@media (max-width: 960px) {
+  *,
+  html,
+  body {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  *::-webkit-scrollbar,
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Sayfa Geçiş Animasyonu (Transform kalıntısı bırakmadığı için fixed/sticky barları ASLA bozmaz!) */
+.page-transition-stage {
+  animation: gib-page-fade-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes gib-page-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Global Atomik Responsive Form & Kart Izgaraları (Mobil Taşmaları Önler) */
+.resp-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resp-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.resp-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.resp-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.portfolio-row-grid {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+}
+
+.portfolio-row-thumb {
+  width: 140px;
+  height: 98px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .resp-grid-6 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .resp-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .resp-grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .resp-grid-2,
+  .resp-grid-3,
+  .resp-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .resp-grid-6 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portfolio-row-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .portfolio-row-thumb {
+    width: 100%;
+    height: 175px;
+  }
 }
 
 /* Global Toast Banner */
@@ -187,17 +298,18 @@ textarea {
   align-items: center;
   gap: 12px;
   padding: 12px 20px;
-  border-radius: var(--radius-pill);
-  background-color: var(--color-secondary);
+  border-radius: var(--radius-md);
+  background-color: var(--color-text-dark);
   color: var(--color-bg-surface);
   font-weight: 600;
   font-size: 13px;
   box-shadow: var(--shadow-lg);
+  max-width: calc(100vw - 28px);
   animation: toast-slide-up 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .app-toast-error {
-  background-color: #b91c1c;
+  background-color: #881337;
   color: #ffffff;
 }
 

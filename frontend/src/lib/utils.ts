@@ -77,3 +77,37 @@ export function getPropertyGallery(property: PropertyRecord): string[] {
   }
   return combined.slice(0, 6);
 }
+
+const ISTANBUL_WEEKDAYS = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'] as const;
+
+/**
+ * ISO tarih dizesini Europe/Istanbul (+03:00) saat diliminde "YYYY-MM-DD" anahtarına çevirir.
+ */
+export function toIstanbulDateKey(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso.slice(0, 10);
+  return date.toLocaleDateString('sv-SE', { timeZone: 'Europe/Istanbul' });
+}
+
+/**
+ * ISO tarih dizesini Europe/Istanbul (+03:00) saat diliminde "HH:00" veya "HH:MM" biçimine çevirir.
+ */
+export function toIstanbulTimeHHMM(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '00:00';
+  return date.toLocaleTimeString('tr-TR', {
+    timeZone: 'Europe/Istanbul',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+/**
+ * "YYYY-MM-DD" tarihinin Türkiye (+03:00) gün kısaltmasını döndürür ("Pzt".."Paz").
+ */
+export function getIstanbulWeekdayShort(dateKey: string): string {
+  const date = new Date(`${dateKey}T12:00:00+03:00`);
+  if (Number.isNaN(date.getTime())) return 'Pzt';
+  return ISTANBUL_WEEKDAYS[date.getDay()] ?? 'Pzt';
+}

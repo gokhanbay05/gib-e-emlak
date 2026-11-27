@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { PropertyRecord } from '../../types';
 import {
   buildPropertyDistrictIndex,
@@ -24,6 +24,7 @@ function SingleTrendChart({
   districtName,
   currentPropertySqmPrice,
 }: SingleTrendChartProps) {
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const allVals = series.flatMap((s) => [s.cityAvg, s.districtAvg]);
   if (currentPropertySqmPrice) allVals.push(currentPropertySqmPrice);
 
@@ -111,36 +112,63 @@ function SingleTrendChart({
           strokeWidth="2.5"
         />
 
-        {/* Noktalar ve Ay Etiketleri */}
+        {/* Noktalar, Etkileşimli Hover Hedefleri ve Ay Etiketleri */}
         {series.map((pt, idx) => {
           const x = getX(idx);
+          const isHovered = hoveredIdx === idx;
           return (
-            <g key={pt.month}>
+            <g
+              key={pt.month}
+              style={{ cursor: 'pointer' }}
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onMouseLeave={() => setHoveredIdx(null)}
+            >
+              {isHovered && (
+                <line
+                  x1={x}
+                  y1={padTop}
+                  x2={x}
+                  y2={height - padBottom}
+                  stroke="var(--color-primary)"
+                  strokeWidth="1"
+                  strokeDasharray="3 3"
+                  opacity="0.6"
+                />
+              )}
               <circle
                 cx={x}
                 cy={getY(pt.cityAvg)}
-                r="4"
+                r={isHovered ? '6' : '4'}
                 fill="var(--color-bg-surface)"
                 stroke="#10b981"
-                strokeWidth="2"
+                strokeWidth="2.5"
               />
               <circle
                 cx={x}
                 cy={getY(pt.districtAvg)}
-                r="4"
+                r={isHovered ? '6' : '4'}
                 fill="var(--color-bg-surface)"
                 stroke="#e86c3a"
-                strokeWidth="2"
+                strokeWidth="2.5"
               />
               <text
                 x={x}
                 y={height - 8}
                 textAnchor="middle"
                 fontSize="10.5"
-                fill="var(--color-text-muted)"
+                fontWeight={isHovered ? '700' : '400'}
+                fill={isHovered ? 'var(--color-primary)' : 'var(--color-text-muted)'}
               >
                 {pt.month}
               </text>
+              {/* Geniş görünmez hover alanı */}
+              <rect
+                x={x - plotW / Math.max(2, series.length * 2)}
+                y={padTop}
+                width={plotW / Math.max(1, series.length)}
+                height={plotH + 16}
+                fill="transparent"
+              />
             </g>
           );
         })}
@@ -154,8 +182,69 @@ function SingleTrendChart({
             fill="var(--color-primary)"
             stroke="#ffffff"
             strokeWidth="2"
+            style={{ pointerEvents: 'none' }}
           />
         )}
+
+        {/* Etkileşimli Tooltip Kartı */}
+        {hoveredIdx !== null && series[hoveredIdx] && (() => {
+          const pt = series[hoveredIdx];
+          const x = getX(hoveredIdx);
+          const showListingRow =
+            hoveredIdx === series.length - 1 && Boolean(currentPropertySqmPrice);
+          const boxW = 196;
+          const boxH = showListingRow ? 84 : 66;
+          const boxX = Math.min(Math.max(padLeft, x - boxW / 2), width - padRight - boxW);
+          const minPointY = Math.min(getY(pt.cityAvg), getY(pt.districtAvg));
+          const boxY = Math.max(4, minPointY - boxH - 12);
+
+          return (
+            <g style={{ pointerEvents: 'none' }}>
+              <rect
+                x={boxX}
+                y={boxY}
+                width={boxW}
+                height={boxH}
+                rx="10"
+                fill="var(--color-bg-surface)"
+                stroke="var(--color-border-default)"
+                strokeWidth="1.2"
+                filter="drop-shadow(0 6px 14px rgba(15, 23, 42, 0.14))"
+              />
+              <text
+                x={boxX + 12}
+                y={boxY + 18}
+                fontSize="11.5"
+                fontWeight="700"
+                fill="var(--color-text-primary)"
+              >
+                {pt.month} Dönemi
+              </text>
+              <circle cx={boxX + 16} cy={boxY + 34} r="4" fill="#10b981" />
+              <text x={boxX + 26} y={boxY + 38} fontSize="11" fill="var(--color-text-secondary)">
+                {cityName}: {pt.cityAvg.toLocaleString('tr-TR')} {unitLabel}
+              </text>
+              <circle cx={boxX + 16} cy={boxY + 52} r="4" fill="#e86c3a" />
+              <text x={boxX + 26} y={boxY + 56} fontSize="11" fill="var(--color-text-secondary)">
+                {districtName}: {pt.districtAvg.toLocaleString('tr-TR')} {unitLabel}
+              </text>
+              {showListingRow && currentPropertySqmPrice && (
+                <>
+                  <circle cx={boxX + 16} cy={boxY + 70} r="4" fill="var(--color-primary)" />
+                  <text
+                    x={boxX + 26}
+                    y={boxY + 74}
+                    fontSize="11"
+                    fontWeight="700"
+                    fill="var(--color-primary)"
+                  >
+                    Bu İlan: {currentPropertySqmPrice.toLocaleString('tr-TR')} {unitLabel}
+                  </text>
+                </>
+              )}
+            </g>
+          );
+        })()}
       </svg>
 
       <div className="emlak-chart-legend">
@@ -188,22 +277,59 @@ function SingleTrendChart({
 }
 
 /**
- * Hepsiemlak Screenshot #9 ve #10 tarzı "Bölge Emlak Endeksi" bileşeni.
+ * Madde 8: Doğrudan PostgreSQL veritabanındaki mevcut ilanlardan beslenen
+ * "Bölge Emlak Endeksi" bileşeni.
  */
-export function PropertyIndexChart({ property }: { property: PropertyRecord }) {
-  const indexData = buildPropertyDistrictIndex(property);
+export function PropertyIndexChart({
+  property,
+  allProperties = [],
+}: {
+  property: PropertyRecord;
+  allProperties?: PropertyRecord[];
+}) {
+  const indexData = buildPropertyDistrictIndex(property, allProperties);
   const gallery = getPropertyGallery(property);
   const isSale = property.listing_type === 'SATILIK';
 
   return (
     <div className="emlak-index-section">
-      <div>
-        <h3 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700 }}>
-          Emlak Endeksi
-        </h3>
-        <p style={{ margin: 0, fontSize: '13px', color: 'var(--color-text-muted)' }}>
-          Bu ilanın <strong>{property.district}, {property.city}</strong> bölgelerine göre m² fiyat analizi
-        </p>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}
+      >
+        <div>
+          <h3 style={{ margin: '0 0 4px', fontSize: '17px', fontWeight: 700 }}>
+            Bölge Emlak Endeksi (Canlı Veritabanı Analizi)
+          </h3>
+          <p
+            style={{
+              margin: 0,
+              fontSize: '13px',
+              color: 'var(--color-text-muted)',
+            }}
+          >
+            Bu ilanın <strong>{property.district}, {property.city}</strong>{' '}
+            bölgesindeki kayıtlı ilanlara göre m² fiyat analizi
+          </p>
+        </div>
+        <span
+          style={{
+            padding: '5px 12px',
+            borderRadius: '999px',
+            backgroundColor: 'var(--color-primary-soft)',
+            color: 'var(--color-primary)',
+            fontSize: '12px',
+            fontWeight: 700,
+          }}
+        >
+          Veritabanı Kaynağı: {property.district} ({indexData.districtPropertyCount} İlan) /{' '}
+          {property.city} ({indexData.cityPropertyCount} İlan)
+        </span>
       </div>
 
       {/* Üst Karşılaştırma Kutusu (Bu İlan vs İlçe Ortalamaları) */}

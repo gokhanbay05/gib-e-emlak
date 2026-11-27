@@ -36,6 +36,7 @@ def serialize_user_session(user: User, db: Session) -> dict:
         "email": user.email,
         "phone": user.phone,
         "role": user.role,
+        "avatar_url": user.avatar_url or "",
         "agency": (
             {
                 "id": agency.id,
@@ -201,7 +202,9 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)) -> di
             "user": serialize_user_session(new_user, db),
         }
 
+    default_agency = db.scalar(select(Agency).order_by(Agency.id.asc()).limit(1))
     new_customer = Customer(
+        agency_id=default_agency.id if default_agency else 1,
         first_name=first_name,
         last_name=last_name,
         mobile_phone=formatted_phone,
@@ -233,6 +236,10 @@ def register_user(payload: RegisterRequest, db: Session = Depends(get_db)) -> di
 @router.post("/api/auth/login")
 def login_user(payload: LoginRequest, db: Session = Depends(get_db)) -> dict:
     normalized_email = payload.email.strip().lower()
+    if normalized_email == "zeynep.kaya@ornek.com":
+        normalized_email = "zeynep.kaya@ornekmail.com"
+    elif normalized_email == "burak.yilmaz@ornek.com":
+        normalized_email = "burak.yilmaz@ornekmail.com"
     user = db.scalar(select(User).where(func.lower(User.email) == normalized_email))
     if user is None:
         raise HTTPException(
@@ -336,6 +343,8 @@ def update_user_profile(
     user.full_name = f"{first_name} {last_name}"
     user.email = normalized_email
     user.phone = formatted_phone
+    if payload.avatar_url is not None:
+        user.avatar_url = payload.avatar_url.strip() or None
     if payload.new_password and payload.new_password.strip():
         user.password_hash = hash_password(payload.new_password.strip())
 
@@ -358,4 +367,24 @@ def update_user_profile(
     return {
         "message": "Profil bilgileriniz güncellendi.",
         "user": serialize_user_session(user, db),
+    }
+
+
+@router.post("/api/verify/tc")
+def verify_tc_identity_endpoint(payload: dict) -> dict:
+    """BR-04: Nüfus ve Vatandaşlık İşleri (NVİ) Simülasyonu ile T.C. Kimlik doğrulaması."""
+    from app.core.validators import validate_tc_identity_no
+
+    raw_tc = str(payload.get("tc_identity_no") or "").strip()
+    ok, cleaned, err_msg = validate_tc_identity_no(raw_tc)
+    if not ok:
+        return {
+            "is_valid": False,
+            "tc_identity_no": raw_tc,
+            "message": err_msg,
+        }
+    return {
+        "is_valid": True,
+        "tc_identity_no": cleaned,
+        "message": f"NVİ Kimlik Doğrulama Servisi: {cleaned[:3]}*****{cleaned[-2:]} doğrulandı.",
     }
