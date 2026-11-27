@@ -142,7 +142,58 @@ def _populate_seed_data(db: Session) -> dict:
         role="AGENT",
         agency_id=ag_izm.id,
     )
-    db.add_all([u_ag1, u_ag2, u_ag3])
+    # 2b. Ofislerin Standart Danışman Hesapları (Şifre: 123456)
+    advisor_users = [
+        User(
+            full_name="Aysun Malbora",
+            email="aysun@baskentvizyon.com.tr",
+            password_hash="demo_hash_danisman_1",
+            phone="0533 618 44 19",
+            role="AGENT",
+            agency_id=ag_ank.id,
+        ),
+        User(
+            full_name="Bektaş Aras",
+            email="bektas@baskentvizyon.com.tr",
+            password_hash="demo_hash_danisman_2",
+            phone="0542 309 71 82",
+            role="AGENT",
+            agency_id=ag_ank.id,
+        ),
+        User(
+            full_name="Elif Sarıoğlu",
+            email="elif@baskentvizyon.com.tr",
+            password_hash="demo_hash_danisman_3",
+            phone="0530 842 15 60",
+            role="AGENT",
+            agency_id=ag_ank.id,
+        ),
+        User(
+            full_name="Murat Soylu",
+            email="murat@bogaziciprestij.com.tr",
+            password_hash="demo_hash_danisman_4",
+            phone="0532 780 90 12",
+            role="AGENT",
+            agency_id=ag_ist.id,
+        ),
+        User(
+            full_name="Bülent Karaaslan",
+            email="bulent@bogaziciprestij.com.tr",
+            password_hash="demo_hash_danisman_5",
+            phone="0544 215 63 40",
+            role="AGENT",
+            agency_id=ag_ist.id,
+        ),
+        User(
+            full_name="Deniz Yılmazer",
+            email="deniz@egekiyi.com.tr",
+            password_hash="demo_hash_danisman_6",
+            phone="0535 412 35 88",
+            role="AGENT",
+            agency_id=ag_izm.id,
+        ),
+    ]
+    db.add_all([u_ag1, u_ag2, u_ag3, *advisor_users])
 
     # 3. İlanların Zorunlu Mülk Sahibi (BR-03 FK) Kayıtları
     owner_ank = Customer(
